@@ -1,0 +1,15 @@
+{
+  "input_dim": 512,
+  "hidden": 256,
+  "layers": 2,
+  "num_classes": 6,
+  "num_frames": 30,
+  "dropout": 0.3,
+  "input_size": 224,
+  "class_labels": ["angry", "disgust", "fear", "happy", "neutral", "sad"],
+  "idx_to_emo": {"0":"angry","1":"disgust","2":"fear","3":"happy","4":"neutral","5":"sad"},
+  "normalize_mean": [0.485, 0.456, 0.406],
+  "normalize_std":  [0.229, 0.224, 0.225],
+  "val_acc": 0.757,
+  "val_f1":  0.755
+}

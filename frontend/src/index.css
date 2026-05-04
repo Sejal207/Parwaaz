@@ -1,0 +1,143 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@300;400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Canvas tones */
+  --ink:      #0e0e0e;
+  --charcoal: #161616;
+  --soot:     #1e1e1e;
+  --ash:      #282828;
+  --stone:    #333333;
+  --dust:     #484848;
+
+  /* Paper / warm whites */
+  --parchment: #f5f0e8;
+  --cream:     #ede8df;
+  --linen:     #d6cfc4;
+  --sand:      #b8b0a6;
+
+  /* Accent — warm terracotta / stage light */
+  --terracotta: #c8706a;
+  --sienna:     #a84e48;
+  --amber:      #d4956a;
+  --gold:       #c8a96a;
+  --sage:       #7a9e8a;
+  --iris:       #8a7ab0;
+
+  /* Text */
+  --text:   #f0ebe2;
+  --text2:  #b8b0a6;
+  --muted:  #686460;
+  --muted2: #454240;
+
+  /* Semantic */
+  --go:      #7a9e8a;
+  --danger:  #c8706a;
+  --warn:    #d4956a;
+
+  /* Glow */
+  --glow-t: rgba(200,112,106,0.2);
+  --glow-a: rgba(212,149,106,0.2);
+
+  --nav-w: 80px;
+}
+
+html { scroll-behavior: smooth; height: 100%; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--ink);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* Subtle grain texture */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+#root {
+  position: relative; z-index: 1;
+  display: flex; min-height: 100vh;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: var(--ink); }
+::-webkit-scrollbar-thumb { background: var(--dust); border-radius: 2px; }
+
+/* ── Base cursor ── */
+* { cursor: default; }
+button, a, [role=button] { cursor: pointer; }
+
+/* ── Card panels ── */
+.art-panel {
+  background: var(--charcoal);
+  border: 1px solid rgba(255,255,255,0.07);
+  position: relative;
+  overflow: hidden;
+}
+.art-panel::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.025) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* ── Hover lift ── */
+.lift {
+  transition: transform 0.4s cubic-bezier(0.23,1,0.32,1), box-shadow 0.4s;
+}
+.lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 30px var(--glow-t);
+}
+
+/* ── Animations ── */
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(24px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity:0; } to { opacity:1; }
+}
+@keyframes slideInLeft {
+  from { opacity:0; transform: translateX(-16px); }
+  to   { opacity:1; transform: translateX(0); }
+}
+@keyframes floatSoft {
+  0%,100% { transform: translateY(0px); }
+  50%     { transform: translateY(-8px); }
+}
+@keyframes spinSlow {
+  to { transform: rotate(360deg); }
+}
+@keyframes shimmer {
+  from { background-position: -400px 0; }
+  to   { background-position: 400px 0; }
+}
+@keyframes inkPulse {
+  0%,100% { opacity:0.8; } 50% { opacity:0.3; }
+}
+@keyframes strokeDraw {
+  from { stroke-dashoffset: 600; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes ripple {
+  from { transform:scale(0); opacity:0.5; }
+  to   { transform:scale(4); opacity:0; }
+}
+@keyframes scanline {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(200%); }
+}
+
+a { color: inherit; text-decoration: none; }
+input, textarea, button { font-family: inherit; }
