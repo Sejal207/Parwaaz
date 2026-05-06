@@ -31,6 +31,7 @@ class Session(Base):
     reference_text  = Column(Text)                 # script user pasted in
     reference_audio = Column(String(500))          # reference singing audio path
     reference_video_path = Column(String(500))     # path to reference video
+    language        = Column(String(10), server_default="en")
     status          = Column(Enum(AnalysisStatus), default=AnalysisStatus.pending)
     error_message   = Column(Text)
     created_at      = Column(DateTime(timezone=True), server_default=func.now())
@@ -59,6 +60,10 @@ class SpeechResult(Base):
     feedback_summary      = Column(Text)
     word_scores           = Column(JSON)
     pronunciation_summary = Column(JSON)
+    pauses                = Column(JSON)
+    pause_stats           = Column(JSON)
+    filler_words          = Column(JSON)
+    filler_counts         = Column(JSON)
     created_at            = Column(DateTime(timezone=True), server_default=func.now())
 
     session = relationship("Session", back_populates="speech_result")

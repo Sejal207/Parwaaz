@@ -21,6 +21,10 @@ class SpeechResultOut(BaseModel):
     feedback_summary:     Optional[str]
     word_scores:          Optional[list] = None
     pronunciation_summary: Optional[dict] = None
+    pauses:               Optional[list] = None
+    pause_stats:          Optional[dict] = None
+    filler_words:         Optional[list] = None
+    filler_counts:        Optional[dict] = None
 
     class Config:
         from_attributes = True
@@ -55,6 +59,7 @@ class SessionOut(BaseModel):
     id:             int
     title:          str
     mode:           PerformanceMode
+    language:       str = "en"
     status:         AnalysisStatus
     error_message:  Optional[str]
     created_at:     datetime

@@ -6,7 +6,7 @@ from app.api.routes import sessions
 import app.db.models  # ensures models are registered
 
 # Create all tables (safety net alongside Alembic)
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="AI Performing Arts Coach",

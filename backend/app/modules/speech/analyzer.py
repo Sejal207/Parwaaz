@@ -24,6 +24,80 @@ def clean_text(text: str) -> str:
     return text
 
 
+def normalize_word(word: str) -> str:
+    word = word.lower().strip()
+    word = re.sub(r"[^\w']", "", word)
+    return word
+
+
+def analyze_pauses(whisper_word_data: list, threshold_seconds: float) -> dict:
+    pauses = []
+    if not whisper_word_data:
+        return {
+            "pauses": pauses,
+            "pause_stats": {
+                "threshold_seconds": threshold_seconds,
+                "pause_count": 0,
+                "total_pause_seconds": 0.0,
+                "avg_pause_seconds": 0.0,
+                "longest_pause_seconds": 0.0,
+            },
+        }
+
+    sorted_words = sorted(whisper_word_data, key=lambda w: w.get("start", 0))
+    for prev, nxt in zip(sorted_words, sorted_words[1:]):
+        prev_end = prev.get("end", 0)
+        next_start = nxt.get("start", 0)
+        gap = round(max(0.0, next_start - prev_end), 3)
+        if gap >= threshold_seconds:
+            pauses.append({
+                "start": prev_end,
+                "end": next_start,
+                "duration": gap,
+                "before_word": prev.get("word"),
+                "after_word": nxt.get("word"),
+            })
+
+    total_pause = round(sum(p["duration"] for p in pauses), 3)
+    pause_count = len(pauses)
+    avg_pause = round(total_pause / pause_count, 3) if pause_count else 0.0
+    longest_pause = round(max([p["duration"] for p in pauses], default=0.0), 3)
+
+    return {
+        "pauses": pauses,
+        "pause_stats": {
+            "threshold_seconds": threshold_seconds,
+            "pause_count": pause_count,
+            "total_pause_seconds": total_pause,
+            "avg_pause_seconds": avg_pause,
+            "longest_pause_seconds": longest_pause,
+        },
+    }
+
+
+def analyze_fillers(whisper_word_data: list, filler_words: list) -> dict:
+    fillers = []
+    filler_counts = {}
+    filler_set = {normalize_word(w) for w in filler_words}
+    filler_set.discard("")
+
+    for wd in whisper_word_data:
+        word = normalize_word(wd.get("word", ""))
+        if word in filler_set:
+            fillers.append({
+                "word": word,
+                "start": wd.get("start"),
+                "end": wd.get("end"),
+                "confidence": wd.get("probability"),
+            })
+            filler_counts[word] = filler_counts.get(word, 0) + 1
+
+    return {
+        "filler_words": fillers,
+        "filler_counts": filler_counts,
+    }
+
+
 def generate_feedback(wer: float, missing: list, extra: list,
                       pronunciation_score: float = None) -> str:
     parts = []
@@ -109,6 +183,12 @@ def analyze_speech(audio_path: str, reference_text: str) -> dict:
 
     transcribed = " ".join(full_text_parts)
 
+    pause_analysis = analyze_pauses(whisper_word_data, threshold_seconds=0.5)
+    filler_analysis = analyze_fillers(
+        whisper_word_data,
+        filler_words=["um", "uh", "like", "ok", "mmm"],
+    )
+
     if not reference_text or not reference_text.strip():
         return {
             "transcribed_text":       transcribed,
@@ -121,6 +201,10 @@ def analyze_speech(audio_path: str, reference_text: str) -> dict:
             "feedback_summary":       "No reference script provided — transcription only.",
             "word_scores":            whisper_word_data,
             "pronunciation_summary":  {},
+            "pauses":                 pause_analysis["pauses"],
+            "pause_stats":            pause_analysis["pause_stats"],
+            "filler_words":           filler_analysis["filler_words"],
+            "filler_counts":          filler_analysis["filler_counts"],
         }
 
     ref_clean = clean_text(reference_text)
@@ -158,4 +242,8 @@ def analyze_speech(audio_path: str, reference_text: str) -> dict:
         "feedback_summary":       feedback,
         "word_scores":            word_scores,
         "pronunciation_summary":  pronunciation_summary,
+        "pauses":                 pause_analysis["pauses"],
+        "pause_stats":            pause_analysis["pause_stats"],
+        "filler_words":           filler_analysis["filler_words"],
+        "filler_counts":          filler_analysis["filler_counts"],
     }

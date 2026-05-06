@@ -12,8 +12,8 @@ export default function App() {
       <Navbar />
       <main style={{
         flex: 1, minWidth: 0, overflowY: 'auto',
-        padding: '56px 64px',
-        background: 'var(--ink)',
+        padding: '100px 40px 40px',
+        background: 'var(--surface-base)',
         position: 'relative',
       }}>
         <Routes>

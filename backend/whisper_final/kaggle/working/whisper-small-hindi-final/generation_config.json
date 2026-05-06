@@ -1,0 +1,11 @@
+{
+  "begin_suppress_tokens": [
+    220,
+    50257
+  ],
+  "language": "hi",
+  "max_length": 448,
+  "suppress_tokens": [],
+  "task": "transcribe",
+  "transformers_version": "4.40.2"
+}

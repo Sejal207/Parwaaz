@@ -1,0 +1,100 @@
+INFO:     Will watch for changes in these directories: ['/Users/sejalgupta/Desktop/performing-arts-coach/backend']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [85988] using WatchFiles
+objc[85990]: Class AVFFrameReceiver is implemented in both /Users/sejalgupta/Desktop/performing-arts-coach/backend/venv/lib/python3.13/site-packages/av/.dylibs/libavdevice.62.1.100.dylib (0x10c4643a8) and /Users/sejalgupta/Desktop/performing-arts-coach/backend/venv/lib/python3.13/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x11dadc3a8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+objc[85990]: Class AVFAudioReceiver is implemented in both /Users/sejalgupta/Desktop/performing-arts-coach/backend/venv/lib/python3.13/site-packages/av/.dylibs/libavdevice.62.1.100.dylib (0x10c4643f8) and /Users/sejalgupta/Desktop/performing-arts-coach/backend/venv/lib/python3.13/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x11dadc3f8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+INFO:     Started server process [85990]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:59145 - "GET /api/sessions/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59183 - "OPTIONS /api/sessions/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59290 - "OPTIONS /api/sessions/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60309 - "OPTIONS /api/sessions/upload HTTP/1.1" 200 OK
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+>>> Running speech analysis...
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 3708.87it/s]
+INFO:     127.0.0.1:60309 - "POST /api/sessions/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60309 - "GET /api/sessions/29 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60309 - "GET /api/sessions/29 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60726 - "POST /api/sessions/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60726 - "GET /api/sessions/30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60726 - "GET /api/sessions/30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60761 - "GET /api/sessions/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60761 - "GET /api/sessions/ HTTP/1.1" 200 OK
+>>> Running speech analysis...
+INFO:     127.0.0.1:60763 - "POST /api/sessions/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60763 - "GET /api/sessions/31 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60763 - "GET /api/sessions/31 HTTP/1.1" 200 OK
+>>> Running facial analysis...
+[Facial] ResNet18 feature extractor ready
+[Facial] EmotionLSTM loaded — val_acc=75.7%
+[Facial] Running model on reference video...
+[Facial] Score: 91.35 | A — Excellent match
+INFO:     127.0.0.1:61150 - "POST /api/sessions/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61150 - "GET /api/sessions/32 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61150 - "GET /api/sessions/32 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61166 - "GET /uploads/annotated_673c81da_h264.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61260 - "GET /api/sessions/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61260 - "GET /api/sessions/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61260 - "GET /api/sessions/32 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61262 - "GET /api/sessions/32 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61266 - "GET /uploads/annotated_673c81da_h264.mp4 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:61269 - "GET /api/sessions/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61269 - "GET /api/sessions/ HTTP/1.1" 200 OK
+>>> Running facial analysis...
+[Facial] Running model on reference video...
+[Facial] Score: 30.91 | F — Very different from reference
+INFO:     127.0.0.1:61271 - "POST /api/sessions/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61271 - "GET /api/sessions/33 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61271 - "GET /api/sessions/33 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61281 - "GET /uploads/annotated_05d7a886_h264.mp4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63233 - "OPTIONS /api/sessions/upload HTTP/1.1" 200 OK
+>>> Running speech analysis...
+INFO:     127.0.0.1:63233 - "POST /api/sessions/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63233 - "GET /api/sessions/34 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63233 - "GET /api/sessions/34 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63260 - "GET /api/sessions/34 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63260 - "GET /api/sessions/34 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63420 - "GET /api/sessions/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63478 - "OPTIONS /api/sessions/upload HTTP/1.1" 200 OK
+>>> Running speech analysis...
+INFO:     127.0.0.1:63478 - "POST /api/sessions/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63478 - "GET /api/sessions/35 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63478 - "GET /api/sessions/35 HTTP/1.1" 200 OK
+>>> Running speech analysis...
+INFO:     127.0.0.1:63637 - "POST /api/sessions/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63637 - "GET /api/sessions/36 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63637 - "GET /api/sessions/36 HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'venv/lib/python3.13/site-packages/sentencepiece/sentencepiece_pb2.py', 'venv/lib/python3.13/site-packages/sentencepiece/sentencepiece_model_pb2.py', 'venv/lib/python3.13/site-packages/sentencepiece/_version.py', 'venv/lib/python3.13/site-packages/sentencepiece/__init__.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [85990]
+objc[92800]: Class AVFFrameReceiver is implemented in both /Users/sejalgupta/Desktop/performing-arts-coach/backend/venv/lib/python3.13/site-packages/av/.dylibs/libavdevice.62.1.100.dylib (0x108d5c3a8) and /Users/sejalgupta/Desktop/performing-arts-coach/backend/venv/lib/python3.13/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x11a3783a8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+objc[92800]: Class AVFAudioReceiver is implemented in both /Users/sejalgupta/Desktop/performing-arts-coach/backend/venv/lib/python3.13/site-packages/av/.dylibs/libavdevice.62.1.100.dylib (0x108d5c3f8) and /Users/sejalgupta/Desktop/performing-arts-coach/backend/venv/lib/python3.13/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x11a3783f8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+INFO:     Started server process [92800]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app/db/models.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [92800]
+WARNING:  WatchFiles detected changes in 'app/api/schemas.py'. Reloading...
+objc[184]: Class AVFFrameReceiver is implemented in both /Users/sejalgupta/Desktop/performing-arts-coach/backend/venv/lib/python3.13/site-packages/av/.dylibs/libavdevice.62.1.100.dylib (0x108e903a8) and /Users/sejalgupta/Desktop/performing-arts-coach/backend/venv/lib/python3.13/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x11a4c03a8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+objc[184]: Class AVFAudioReceiver is implemented in both /Users/sejalgupta/Desktop/performing-arts-coach/backend/venv/lib/python3.13/site-packages/av/.dylibs/libavdevice.62.1.100.dylib (0x108e903f8) and /Users/sejalgupta/Desktop/performing-arts-coach/backend/venv/lib/python3.13/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x11a4c03f8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+INFO:     Started server process [184]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+objc[202]: Class AVFFrameReceiver is implemented in both /Users/sejalgupta/Desktop/performing-arts-coach/backend/venv/lib/python3.13/site-packages/av/.dylibs/libavdevice.62.1.100.dylib (0x1077403a8) and /Users/sejalgupta/Desktop/performing-arts-coach/backend/venv/lib/python3.13/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x11a6fc3a8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+objc[202]: Class AVFAudioReceiver is implemented in both /Users/sejalgupta/Desktop/performing-arts-coach/backend/venv/lib/python3.13/site-packages/av/.dylibs/libavdevice.62.1.100.dylib (0x1077403f8) and /Users/sejalgupta/Desktop/performing-arts-coach/backend/venv/lib/python3.13/site-packages/cv2/.dylibs/libavdevice.61.3.100.dylib (0x11a6fc3f8). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+INFO:     Started server process [202]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [202]
+INFO:     Stopping reloader process [85988]
+/opt/homebrew/Cellar/python@3.13/3.13.7/Frameworks/Python.framework/Versions/3.13/lib/python3.13/multiprocessing/resource_tracker.py:324: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown: {'/loky-85990-rc96zmoh'}
+  warnings.warn(
