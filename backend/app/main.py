@@ -4,9 +4,43 @@ from fastapi.staticfiles import StaticFiles
 from app.db.database import Base, engine
 from app.api.routes import sessions
 import app.db.models  # ensures models are registered
+from sqlalchemy import text
 
 # Create all tables (safety net alongside Alembic)
 # Base.metadata.create_all(bind=engine)
+
+def run_db_migrations():
+    print(">>> Running manual DB schema migration for Singing Module...")
+    migrations = [
+        "ALTER TABLE sessions ADD COLUMN IF NOT EXISTS reference_audio_path VARCHAR(500);",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS pitch_accuracy FLOAT;",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS mean_error_cents FLOAT;",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS final_score FLOAT;",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS rhythm_deviation_ms FLOAT;",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS tempo_ratio FLOAT;",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS stability FLOAT;",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS lyrics_error FLOAT;",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS key_offset INTEGER;",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS ref_contour JSON;",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS user_contour JSON;",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS pitch_tendency VARCHAR(200);",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS timing_tendency VARCHAR(200);",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS detected_scale VARCHAR(100);",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS note_transitions JSON;",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS note_durations JSON;",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS note_timeline JSON;",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS timeline_feedback JSON;",
+        "ALTER TABLE pitch_results ADD COLUMN IF NOT EXISTS feedback_summary TEXT;"
+    ]
+    try:
+        with engine.begin() as conn:
+            for stmt in migrations:
+                conn.execute(text(stmt))
+        print(">>> DB schema migration completed successfully!")
+    except Exception as e:
+        print(f">>> DB schema migration failed: {e}")
+
+run_db_migrations()
 
 app = FastAPI(
     title="AI Performing Arts Coach",

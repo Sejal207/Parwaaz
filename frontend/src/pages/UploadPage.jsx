@@ -12,12 +12,15 @@ export default function UploadPage() {
   // File state
   const [video, setVideo] = useState(null)
   const [referenceVideo, setReferenceVideo] = useState(null)
+  const [referenceAudio, setReferenceAudio] = useState(null)
   
   const [draggingVideo, setDraggingVideo] = useState(false)
   const [draggingRefVideo, setDraggingRefVideo] = useState(false)
+  const [draggingRefAudio, setDraggingRefAudio] = useState(false)
   
   const videoRef = useRef()
   const refVideoRef = useRef()
+  const refAudioRef = useRef()
 
   // Upload/Processing state
   const [isUploading, setIsUploading] = useState(false)
@@ -27,10 +30,6 @@ export default function UploadPage() {
   const handleUploadClick = () => {
     if (!title) {
       setError('Please enter a performance title')
-      return
-    }
-    if (performanceType === 'singing') {
-      setError('Singing analysis is coming soon. Please choose Acting, Speech, or All Three.')
       return
     }
     if (!video) {
@@ -43,6 +42,10 @@ export default function UploadPage() {
     }
     if ((performanceType === 'acting' || performanceType === 'full') && !referenceVideo) {
       setError('Please provide a reference video for acting analysis')
+      return
+    }
+    if ((performanceType === 'singing' || performanceType === 'full') && !referenceAudio) {
+      setError('Please provide a reference audio track for singing analysis')
       return
     }
     
@@ -65,6 +68,10 @@ export default function UploadPage() {
       if (referenceVideo) fd.append('reference_video', referenceVideo)
     }
 
+    if (performanceType === 'singing' || performanceType === 'full') {
+      if (referenceAudio) fd.append('reference_audio', referenceAudio)
+    }
+
     uploadSession(fd, setProgress)
       .then(res => {
         setTimeout(() => {
@@ -80,6 +87,7 @@ export default function UploadPage() {
   const isRecordDisabled = true // completely removing record feature
   const needsRefText = performanceType === 'speech' || performanceType === 'full'
   const needsRefVideo = performanceType === 'acting' || performanceType === 'full'
+  const needsRefAudio = performanceType === 'singing' || performanceType === 'full'
 
   // --- Processing Screen ---
   if (isUploading) {
@@ -127,26 +135,21 @@ export default function UploadPage() {
           {[
             { id: 'acting', label: 'Acting' },
             { id: 'speech', label: 'Speech' },
-            { id: 'singing', label: 'Singing', upcoming: true },
+            { id: 'singing', label: 'Singing' },
             { id: 'full', label: 'All Three' }
           ].map(type => (
             <div key={type.id}
-              onClick={() => !type.upcoming && setPerformanceType(type.id)}
+              onClick={() => setPerformanceType(type.id)}
               style={{
                 padding: '10px 24px', borderRadius: '999px', cursor: 'pointer',
                 background: performanceType === type.id ? 'var(--accent-teal)' : 'rgba(255,255,255,0.5)',
                 color: performanceType === type.id ? 'white' : 'var(--text-secondary)',
                 fontWeight: 500, fontSize: 14,
                 boxShadow: performanceType === type.id ? '0 4px 12px rgba(20,184,166,0.3)' : 'none',
-                transition: 'all 0.2s ease',
-                opacity: type.upcoming ? 0.6 : 1,
-                cursor: type.upcoming ? 'not-allowed' : 'pointer'
+                transition: 'all 0.2s ease'
               }}>
               {performanceType === type.id && <CheckCircle2 size={14} style={{ display: 'inline', marginRight: 6, marginBottom: -2 }} />}
               {type.label}
-              {type.upcoming && (
-                <span style={{ marginLeft: 8, fontSize: 11, color: '#F59E0B' }}>Upcoming soon</span>
-              )}
             </div>
           ))}
         </div>
@@ -226,18 +229,69 @@ export default function UploadPage() {
             </div>
           )}
 
+          {needsRefAudio && (
+            <div className="glass-panel" style={{ padding: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <Music size={20} color="var(--accent-teal)" />
+                <h3 className="text-h3" style={{ fontSize: 16 }}>Reference Audio</h3>
+              </div>
+              <p className="text-body" style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16 }}>
+                Required for Singing Analysis. The AI will compare your pitch and timing against this audio track. (Supports MP3, WAV, and other formats)
+              </p>
+              
+              <div 
+                onDragOver={e => { e.preventDefault(); setDraggingRefAudio(true) }}
+                onDragLeave={() => setDraggingRefAudio(false)}
+                onDrop={e => { 
+                  e.preventDefault(); setDraggingRefAudio(false); 
+                  const f = e.dataTransfer.files[0]; 
+                  if (f?.type.startsWith('audio/')) setReferenceAudio(f) 
+                }}
+                onClick={() => !referenceAudio && refAudioRef.current?.click()}
+                style={{
+                  padding: 32, textAlign: 'center', cursor: referenceAudio ? 'default' : 'pointer',
+                  border: draggingRefAudio ? '2px dashed var(--accent-teal)' : '1px dashed rgba(100,116,139,0.3)',
+                  borderRadius: 12, background: 'rgba(255,255,255,0.2)', transition: 'all 0.2s'
+                }}>
+                <input ref={refAudioRef} type="file" accept="audio/*" style={{ display: 'none' }}
+                  onChange={e => setReferenceAudio(e.target.files[0])} />
+                
+                {referenceAudio ? (
+                  <div>
+                    <CheckCircle2 size={24} color="var(--accent-teal)" style={{ marginBottom: 8 }} />
+                    <p className="text-body" style={{ fontWeight: 600, marginBottom: 4 }}>{referenceAudio.name}</p>
+                    <button onClick={(e) => { e.stopPropagation(); setReferenceAudio(null) }}
+                      style={{
+                        background: 'none', border: 'none', color: 'var(--accent-deep)',
+                        textDecoration: 'underline', cursor: 'pointer', fontSize: 12
+                      }}>
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <Upload size={24} color="var(--text-secondary)" style={{ marginBottom: 8 }} />
+                    <p className="text-body" style={{ fontSize: 14 }}>Click or drag reference audio here</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
         </div>
 
         <div style={{ height: 1, background: 'rgba(255,255,255,0.3)', marginBottom: 32 }} />
 
-        {/* YOUR PERFORMANCE VIDEO Upload Zone */}
+        {/* YOUR PERFORMANCE VIDEO/AUDIO Upload Zone */}
         <div 
           onDragOver={e => { e.preventDefault(); setDraggingVideo(true) }}
           onDragLeave={() => setDraggingVideo(false)}
           onDrop={e => { 
             e.preventDefault(); setDraggingVideo(false); 
             const f = e.dataTransfer.files[0]; 
-            if (f?.type.startsWith('video/')) setVideo(f) 
+            const isVideo = f?.type.startsWith('video/');
+            const isAudio = performanceType === 'singing' && f?.type.startsWith('audio/');
+            if (isVideo || isAudio) setVideo(f) 
           }}
           onClick={() => !video && videoRef.current?.click()}
           className="glass-panel"
@@ -247,7 +301,7 @@ export default function UploadPage() {
             background: draggingVideo ? 'rgba(20,184,166,0.1)' : 'rgba(255,255,255,0.3)',
             marginBottom: 24, transition: 'all 0.2s'
           }}>
-          <input ref={videoRef} type="file" accept="video/*" style={{ display: 'none' }}
+          <input ref={videoRef} type="file" accept={performanceType === 'singing' ? "video/*,audio/*" : "video/*"} style={{ display: 'none' }}
             onChange={e => setVideo(e.target.files[0])} />
           
           {video ? (
@@ -269,7 +323,9 @@ export default function UploadPage() {
             <div>
               <Upload size={32} color="var(--accent-teal)" style={{ marginBottom: 12 }} />
               <p className="text-h2" style={{ marginBottom: 4 }}>Upload Your Performance</p>
-              <p className="text-body" style={{ color: 'var(--text-secondary)' }}>Drop your final video here</p>
+              <p className="text-body" style={{ color: 'var(--text-secondary)' }}>
+                {performanceType === 'singing' ? 'Drop your video or audio file here' : 'Drop your final video here'}
+              </p>
             </div>
           )}
         </div>
@@ -281,7 +337,7 @@ export default function UploadPage() {
         }}>
           <Info size={24} color="var(--accent-teal)" />
           <p className="text-body" style={{ fontSize: 14, margin: 0 }}>
-            <b>Tip:</b> Choose a quiet, well-lit space. The AI analyzes both your expressions and voice together.
+            <b>Tip:</b> {performanceType === 'singing' ? 'You can upload a video or audio file. Choose a quiet space for best results.' : 'Choose a quiet, well-lit space. The AI analyzes both your expressions and voice together.'}
           </p>
         </div>
 

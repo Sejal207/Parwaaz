@@ -39,6 +39,7 @@ async def upload_and_analyze(
     reference_text: Optional[str] = Form(None),
     video: UploadFile = File(...),
     reference_video: Optional[UploadFile] = File(None),
+    reference_audio: Optional[UploadFile] = File(None),
     db: DBSession = Depends(get_db),
     ):
     video_path = await save_upload(video)
@@ -48,12 +49,18 @@ async def upload_and_analyze(
     if reference_video and reference_video.filename:
         ref_video_path = await save_upload(reference_video)
 
+    # Save reference audio if provided (for singing mode)
+    ref_audio_path = None
+    if reference_audio and reference_audio.filename:
+        ref_audio_path = await save_upload(reference_audio)
+
     session = Session(
         title=title,
         mode=mode,
         video_path=str(video_path),
         reference_text=reference_text,
         reference_video_path=str(ref_video_path) if ref_video_path else None,
+        reference_audio_path=str(ref_audio_path) if ref_audio_path else None,
         status=AnalysisStatus.processing,
     )
     db.add(session)
@@ -62,16 +69,32 @@ async def upload_and_analyze(
 
     try:
 
-        # Extract audio — use absolute path for both input and output
-        audio_path = video_path.with_suffix('').with_name(
-            video_path.stem + "_audio.wav"
-        )
-        ret = os.system(
-            f'ffmpeg -i "{video_path}" -vn -acodec pcm_s16le '
-            f'-ar 16000 -ac 1 "{audio_path}" -y -loglevel quiet'
-        )
-        if ret != 0:
-            raise Exception(f"ffmpeg failed with code {ret}. Is ffmpeg installed? Run: brew install ffmpeg")
+        # Check if uploaded file is audio or video
+        file_ext = video_path.suffix.lower()
+        is_audio_file = file_ext in ['.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac']
+        
+        if is_audio_file:
+            # If it's an audio file, use it directly (convert to wav for consistency)
+            audio_path = video_path.with_suffix('').with_name(
+                video_path.stem + "_audio.wav"
+            )
+            ret = os.system(
+                f'ffmpeg -i "{video_path}" -acodec pcm_s16le '
+                f'-ar 16000 -ac 1 "{audio_path}" -y -loglevel quiet'
+            )
+            if ret != 0:
+                raise Exception(f"ffmpeg conversion failed with code {ret}. Is ffmpeg installed? Run: brew install ffmpeg")
+        else:
+            # Extract audio from video
+            audio_path = video_path.with_suffix('').with_name(
+                video_path.stem + "_audio.wav"
+            )
+            ret = os.system(
+                f'ffmpeg -i "{video_path}" -vn -acodec pcm_s16le '
+                f'-ar 16000 -ac 1 "{audio_path}" -y -loglevel quiet'
+            )
+            if ret != 0:
+                raise Exception(f"ffmpeg failed with code {ret}. Is ffmpeg installed? Run: brew install ffmpeg")
 
         if not audio_path.exists():
             raise Exception(f"Audio extraction failed — file not created at {audio_path}")
@@ -79,8 +102,8 @@ async def upload_and_analyze(
         session.audio_path = str(audio_path)
         db.commit()
 
-        # ── Facial Analysis ──
-        if session.mode in ['acting', 'full'] and not session.facial_result:
+        # -- Facial Analysis (only for video files) --
+        if not is_audio_file and session.mode in ['acting', 'full'] and not session.facial_result:
             try:
                 print(">>> Running facial analysis...")
                 facial_data = analyze_facial(
@@ -126,9 +149,8 @@ async def upload_and_analyze(
             except Exception as e:
                 print(f"Error in facial analysis: {e}")
                 import traceback; traceback.print_exc()
-                # Don't mark whole session as failed — partial results still useful
 
-        # ── Speech Analysis ──
+        # -- Speech Analysis --
         if session.mode in ['speech', 'full'] and not session.speech_result:
             try:
                 print(">>> Running speech analysis...")
@@ -143,6 +165,51 @@ async def upload_and_analyze(
                 db.commit()
             except Exception as e:
                 print(f"Error in speech analysis: {e}")
+
+        # -- Singing Analysis --
+        if session.mode in ['singing', 'full'] and not session.pitch_result:
+            try:
+                print(">>> Running singing analysis...")
+                if ref_audio_path and ref_audio_path.exists():
+                    from app.modules.singing.analyzer import analyze_singing
+                    cache_dir = str(UPLOAD_DIR / "singing_cache")
+                    singing_data = analyze_singing(
+                        user_audio_path=str(audio_path),
+                        reference_audio_path=str(ref_audio_path),
+                        cache_dir=cache_dir,
+                    )
+                    session.pitch_result = PitchResult(
+                        session_id=session.id,
+                        pitch_accuracy=singing_data.get("pitch_accuracy"),
+                        mean_error_cents=singing_data.get("mean_error_cents"),
+                        in_range_percent=singing_data.get("pitch_accuracy"),
+                        final_score=singing_data.get("final_score"),
+                        rhythm_deviation_ms=singing_data.get("rhythm_deviation_ms"),
+                        tempo_ratio=singing_data.get("tempo_ratio"),
+                        stability=singing_data.get("stability"),
+                        lyrics_error=singing_data.get("lyrics_error"),
+                        key_offset=singing_data.get("key_offset"),
+                        ref_contour=singing_data.get("ref_contour"),
+                        user_contour=singing_data.get("user_contour"),
+                        pitch_tendency=singing_data.get("pitch_tendency"),
+                        timing_tendency=singing_data.get("timing_tendency"),
+                        detected_scale=singing_data.get("detected_scale"),
+                        note_transitions=singing_data.get("note_transitions"),
+                        note_durations=singing_data.get("note_durations"),
+                        note_timeline=singing_data.get("note_timeline"),
+                        timeline_feedback=singing_data.get("timeline_feedback"),
+                        feedback_summary=singing_data.get("feedback_summary"),
+                    )
+                    db.commit()
+                else:
+                    session.pitch_result = PitchResult(
+                        session_id=session.id,
+                        feedback_summary="No reference audio provided. Upload a reference track for full singing analysis.",
+                    )
+                    db.commit()
+            except Exception as e:
+                print(f"Error in singing analysis: {e}")
+                import traceback; traceback.print_exc()
 
         session.status = AnalysisStatus.completed
         db.commit()

@@ -26,16 +26,17 @@ class Session(Base):
     id              = Column(Integer, primary_key=True, index=True)
     title           = Column(String(200), nullable=False)
     mode            = Column(Enum(PerformanceMode), default=PerformanceMode.full)
-    video_path      = Column(String(500))          # path to uploaded video
-    audio_path      = Column(String(500))          # ffmpeg-extracted audio
-    reference_text  = Column(Text)                 # script user pasted in
-    reference_audio = Column(String(500))          # reference singing audio path
-    reference_video_path = Column(String(500))     # path to reference video
-    language        = Column(String(10), server_default="en")
-    status          = Column(Enum(AnalysisStatus), default=AnalysisStatus.pending)
-    error_message   = Column(Text)
-    created_at      = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at      = Column(DateTime(timezone=True), onupdate=func.now())
+    video_path           = Column(String(500))   # path to uploaded video
+    audio_path           = Column(String(500))   # ffmpeg-extracted audio
+    reference_text       = Column(Text)          # script user pasted in
+    reference_audio      = Column(String(500))   # reference singing audio path (legacy)
+    reference_audio_path = Column(String(500))   # uploaded reference mp3/wav for singing
+    reference_video_path = Column(String(500))   # path to reference video
+    language             = Column(String(10), server_default="en")
+    status               = Column(Enum(AnalysisStatus), default=AnalysisStatus.pending)
+    error_message        = Column(Text)
+    created_at           = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at           = Column(DateTime(timezone=True), onupdate=func.now())
     annotated_video_path = Column(String(500))
 
     # one-to-one results
@@ -88,15 +89,43 @@ class FacialResult(Base):
     session = relationship("Session", back_populates="facial_result")
 
 class PitchResult(Base):
-    """Placeholder for teammate's module."""
+    """Full singing analysis results."""
     __tablename__ = "pitch_results"
 
-    id                = Column(Integer, primary_key=True, index=True)
-    session_id        = Column(Integer, ForeignKey("sessions.id"), unique=True)
-    mean_error_cents  = Column(Float)
-    in_range_percent  = Column(Float)
-    pitch_contour     = Column(JSON)   # [{time, user_pitch, ref_pitch}]
-    feedback_summary  = Column(Text)
-    created_at        = Column(DateTime(timezone=True), server_default=func.now())
+    id                   = Column(Integer, primary_key=True, index=True)
+    session_id           = Column(Integer, ForeignKey("sessions.id"), unique=True)
+
+    # Core accuracy metrics
+    pitch_accuracy       = Column(Float)   # % of frames within 50 cents
+    mean_error_cents     = Column(Float)   # mean absolute error in cents
+    in_range_percent     = Column(Float)   # alias for pitch_accuracy (legacy)
+    final_score          = Column(Float)   # weighted composite 0–100
+
+    # Rhythm metrics
+    rhythm_deviation_ms  = Column(Float)   # mean onset deviation in ms
+    tempo_ratio          = Column(Float)   # user_duration / ref_duration
+
+    # Voice quality
+    stability            = Column(Float)   # std dev of pitch in cents
+    lyrics_error         = Column(Float)   # word error rate 0.0–1.0
+    key_offset           = Column(Integer) # semitone shift detected
+
+    # Contours (sampled arrays for charting)
+    ref_contour          = Column(JSON)    # reference pitch array
+    user_contour         = Column(JSON)    # user pitch array (DTW aligned)
+
+    # Qualitative analysis
+    pitch_tendency       = Column(String(200))  # flat/sharp/balanced
+    timing_tendency      = Column(String(200))  # early/late/aligned
+    detected_scale       = Column(String(100))  # e.g. "G Major"
+
+    # Note analysis
+    note_transitions     = Column(JSON)    # list of "A → B" strings
+    note_durations       = Column(JSON)    # [{note, duration}]
+    note_timeline        = Column(JSON)    # [{note, start, end}] for live sync
+    timeline_feedback    = Column(JSON)    # [{start, end, message}]
+
+    feedback_summary     = Column(Text)
+    created_at           = Column(DateTime(timezone=True), server_default=func.now())
 
     session = relationship("Session", back_populates="pitch_result")

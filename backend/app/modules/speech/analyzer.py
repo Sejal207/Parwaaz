@@ -125,7 +125,7 @@ def generate_feedback(wer: float, missing: list, extra: list,
     return " ".join(parts)
 
 
-def extract_error_words(alignments):
+def extract_error_words(alignments, ref_words_list, hyp_words_list):
     """Compatible with both old and new jiwer versions."""
     missing_words = []
     extra_words   = []
@@ -133,16 +133,22 @@ def extract_error_words(alignments):
     for chunk in alignments[0]:
         chunk_type = chunk.type
 
-        # Handle both jiwer API versions
-        try:
-            ref_words = chunk.ref_words
-        except AttributeError:
-            ref_words = getattr(chunk, 'reference_words', [])
+        ref_words = None
+        hyp_words = None
 
-        try:
+        if hasattr(chunk, 'ref_words'):
+            ref_words = chunk.ref_words
+        elif hasattr(chunk, 'reference_words'):
+            ref_words = chunk.reference_words
+        else:
+            ref_words = ref_words_list[chunk.ref_start_idx : chunk.ref_end_idx]
+
+        if hasattr(chunk, 'hyp_words'):
             hyp_words = chunk.hyp_words
-        except AttributeError:
-            hyp_words = getattr(chunk, 'hypothesis_words', [])
+        elif hasattr(chunk, 'hypothesis_words'):
+            hyp_words = chunk.hypothesis_words
+        else:
+            hyp_words = hyp_words_list[chunk.hyp_start_idx : chunk.hyp_end_idx]
 
         if chunk_type == "delete":
             missing_words.extend(ref_words)
@@ -213,16 +219,21 @@ def analyze_speech(audio_path: str, reference_text: str) -> dict:
     result = process_words(ref_clean, hyp_clean)
     wer    = result.wer
 
-    missing_words, extra_words = extract_error_words(result.alignments)
-
-    # Pronunciation scoring
     reference_words   = ref_clean.split()
     transcribed_words = hyp_clean.split()
 
+    missing_words, extra_words = extract_error_words(
+        result.alignments,
+        reference_words,
+        transcribed_words
+    )
+
+    # Pronunciation scoring
     word_scores = compute_word_scores(
         reference_words=reference_words,
         transcribed_words=transcribed_words,
         whisper_word_data=whisper_word_data,
+        alignments=result.alignments,
     )
     pronunciation_summary = generate_pronunciation_summary(word_scores)
 

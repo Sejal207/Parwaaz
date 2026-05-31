@@ -98,7 +98,7 @@ export default function ResultPage() {
       {/* Detail Views */}
       {activeDetail === 'acting' && <ActingAnalysis result={fr} />}
       {activeDetail === 'speech' && <SpeechAnalysis result={sr} />}
-      {activeDetail === 'pitch'  && <PitchAnalysis result={pr} />}
+      {activeDetail === 'pitch'  && <PitchAnalysis result={pr} session={session} />}
 
       {/* Main Dashboard View */}
       {!activeDetail && (

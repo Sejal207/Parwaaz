@@ -46,27 +46,55 @@ class FacialResultOut(BaseModel):
 
 
 class PitchResultOut(BaseModel):
-    mean_error_cents:  Optional[float]
-    in_range_percent:  Optional[float]
-    pitch_contour:     Optional[list]
-    feedback_summary:  Optional[str]
+    # Core accuracy
+    pitch_accuracy:       Optional[float] = None
+    mean_error_cents:     Optional[float] = None
+    in_range_percent:     Optional[float] = None   # legacy alias
+    final_score:          Optional[float] = None
+
+    # Rhythm
+    rhythm_deviation_ms:  Optional[float] = None
+    tempo_ratio:          Optional[float] = None
+
+    # Voice quality
+    stability:            Optional[float] = None
+    lyrics_error:         Optional[float] = None
+    key_offset:           Optional[int] = None
+
+    # Contours
+    ref_contour:          Optional[list] = None
+    user_contour:         Optional[list] = None
+
+    # Qualitative
+    pitch_tendency:       Optional[str] = None
+    timing_tendency:      Optional[str] = None
+    detected_scale:       Optional[str] = None
+
+    # Note analysis
+    note_transitions:     Optional[list] = None
+    note_durations:       Optional[list] = None
+    note_timeline:        Optional[list] = None
+    timeline_feedback:    Optional[list] = None
+
+    feedback_summary:     Optional[str] = None
 
     class Config:
         from_attributes = True
 
 
 class SessionOut(BaseModel):
-    id:             int
-    title:          str
-    mode:           PerformanceMode
-    language:       str = "en"
-    status:         AnalysisStatus
-    error_message:  Optional[str]
-    created_at:     datetime
-    speech_result:  Optional[SpeechResultOut]
-    facial_result:  Optional[FacialResultOut]
-    pitch_result:   Optional[PitchResultOut]
+    id:                   int
+    title:                str
+    mode:                 PerformanceMode
+    language:             str = "en"
+    status:               AnalysisStatus
+    error_message:        Optional[str]
+    created_at:           datetime
+    speech_result:        Optional[SpeechResultOut]
+    facial_result:        Optional[FacialResultOut]
+    pitch_result:         Optional[PitchResultOut]
     annotated_video_path: Optional[str] = None
+    reference_audio_path: Optional[str] = None
 
     class Config:
         from_attributes = True
