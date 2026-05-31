@@ -2,3 +2,11 @@ venv/
 __pycache__/
 *.pyc
 .DS_Store
+# ML Models
+*.bin
+*.safetensors
+*.pt
+*.pth
+
+backend/whisper_final/
+backend/app/modules/speech/whisper_hindi/
