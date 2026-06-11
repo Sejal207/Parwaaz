@@ -1,9 +1,16 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+print("STEP 1")
 from app.db.database import Base, engine
+
+print("STEP 2")
 from app.api.routes import sessions
-import app.db.models  # ensures models are registered
+
+print("STEP 3")
+import app.db.models
+
+print("STEP 4")
 from sqlalchemy import text
 
 # Create all tables (safety net alongside Alembic)
