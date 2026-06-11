@@ -2,7 +2,7 @@ fastapi==0.111.0
 uvicorn==0.29.0
 python-multipart==0.0.9
 sqlalchemy==2.0.36
-psycopg[binary]
+psycopg2-binary==2.9.10
 alembic==1.13.1
 python-dotenv==1.0.1
 faster-whisper>=1.0.3
