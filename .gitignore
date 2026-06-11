@@ -8,5 +8,5 @@ __pycache__/
 *.pt
 *.pth
 
-backend/whisper_final/
 backend/app/modules/speech/whisper_hindi/
+backend/whisper_final/kaggle/working/
