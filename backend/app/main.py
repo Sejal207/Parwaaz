@@ -1,17 +1,25 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 print("STEP 1")
-from app.db.database import Base, engine
+from fastapi import FastAPI
 
 print("STEP 2")
-from app.api.routes import sessions
+from fastapi.middleware.cors import CORSMiddleware
 
 print("STEP 3")
-import app.db.models
+from fastapi.staticfiles import StaticFiles
 
 print("STEP 4")
+from app.db.database import Base, engine
+
+print("STEP 5")
+from app.api.routes import sessions
+
+print("STEP 6")
+import app.db.models
+
+print("STEP 7")
 from sqlalchemy import text
+
+print("STEP 8")
 
 # Create all tables (safety net alongside Alembic)
 # Base.metadata.create_all(bind=engine)
