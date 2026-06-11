@@ -6,6 +6,8 @@ psycopg[binary]
 alembic==1.13.1
 python-dotenv==1.0.1
 faster-whisper>=1.0.3
+openai-whisper>=20231117
+huggingface-hub>=0.17.0
 av>=14.0.0
 jiwer==3.0.4
 ffmpeg-python==0.2.0
