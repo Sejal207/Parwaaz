@@ -55,7 +55,7 @@ def run_db_migrations():
     except Exception as e:
         print(f">>> DB schema migration failed: {e}")
 
-run_db_migrations()
+# run_db_migrations()
 
 app = FastAPI(
     title="AI Performing Arts Coach",
