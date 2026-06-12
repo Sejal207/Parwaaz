@@ -1,3 +1,4 @@
+print("STEP 0 - MAIN FILE STARTED", flush=True)
 print("STEP 1")
 from fastapi import FastAPI
 
