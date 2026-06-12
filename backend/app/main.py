@@ -56,13 +56,13 @@ def run_db_migrations():
         print(f">>> DB schema migration failed: {e}")
 
 # run_db_migrations()
-
+print("BEFORE FASTAPI")
 app = FastAPI(
     title="AI Performing Arts Coach",
     description="Multimodal feedback for actors, speakers, and singers",
     version="1.0.0",
 )
-
+print("AFTER FASTAPI")
 # Allow React dev server to talk to FastAPI
 app.add_middleware(
     CORSMiddleware,
