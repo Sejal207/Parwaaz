@@ -1,4 +1,9 @@
 print("STEP 0 - MAIN FILE STARTED", flush=True)
+print("AAAAAAAAAAAAAAAAAAAA", flush=True)
+print("BBBBBBBBBBBBBBBBBBBB", flush=True)
+print("CCCCCCCCCCCCCCCCCCCC", flush=True)
+
+raise Exception("STOP HERE")
 print("STEP 1")
 from fastapi import FastAPI
 
