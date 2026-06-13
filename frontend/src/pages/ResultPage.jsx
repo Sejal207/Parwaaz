@@ -6,7 +6,7 @@ import ActingAnalysis from '../components/ActingAnalysis'
 import SpeechAnalysis from '../components/SpeechAnalysis'
 import PitchAnalysis from '../components/PitchAnalysis'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+const API = import.meta.env.VITE_API_URL '
 
 export default function ResultPage() {
   const { id } = useParams()
