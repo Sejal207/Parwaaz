@@ -11,8 +11,8 @@ from app.db.models import Session, SpeechResult, FacialResult, PitchResult, Anal
 from app.api.schemas import SessionOut
 from app.core.config import settings
 from app.modules.speech.analyzer import analyze_speech
-from app.modules.facial.analyzer import analyze_facial
-from app.modules.facial.video_overlay import create_annotated_video
+# from app.modules.facial.analyzer import analyze_facial
+# from app.modules.facial.video_overlay import create_annotated_video
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 

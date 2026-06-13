@@ -12,7 +12,7 @@ print("STEP 4", flush=True)
 from app.db.database import Base, engine
 
 print("STEP 5", flush=True)
-# from app.api.routes import sessions
+from app.api.routes import sessions
 
 print("STEP 6", flush=True)
 import app.db.models
@@ -77,7 +77,7 @@ app.add_middleware(
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Register routes
-# app.include_router(sessions.router, prefix="/api")
+app.include_router(sessions.router, prefix="/api")
 
 
 @app.get("/")
