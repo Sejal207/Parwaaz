@@ -1,31 +1,26 @@
 print("STEP 0 - MAIN FILE STARTED", flush=True)
-print("AAAAAAAAAAAAAAAAAAAA", flush=True)
-print("BBBBBBBBBBBBBBBBBBBB", flush=True)
-print("CCCCCCCCCCCCCCCCCCCC", flush=True)
-
-raise Exception("STOP HERE")
-print("STEP 1")
+print("STEP 1", flush=True)
 from fastapi import FastAPI
 
-print("STEP 2")
+print("STEP 2", flush=True)
 from fastapi.middleware.cors import CORSMiddleware
 
-print("STEP 3")
+print("STEP 3", flush=True)
 from fastapi.staticfiles import StaticFiles
 
-print("STEP 4")
+print("STEP 4", flush=True)
 from app.db.database import Base, engine
 
-print("STEP 5")
-from app.api.routes import sessions
+print("STEP 5", flush=True)
+# from app.api.routes import sessions
 
-print("STEP 6")
+print("STEP 6", flush=True)
 import app.db.models
 
-print("STEP 7")
+print("STEP 7", flush=True)
 from sqlalchemy import text
 
-print("STEP 8")
+print("STEP 8", flush=True)
 
 # Create all tables (safety net alongside Alembic)
 # Base.metadata.create_all(bind=engine)
@@ -82,7 +77,7 @@ app.add_middleware(
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Register routes
-app.include_router(sessions.router, prefix="/api")
+# app.include_router(sessions.router, prefix="/api")
 
 
 @app.get("/")
