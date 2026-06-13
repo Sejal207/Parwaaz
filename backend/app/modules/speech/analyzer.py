@@ -1,7 +1,7 @@
 from faster_whisper import WhisperModel
 from jiwer import process_words
 from app.core.config import settings
-from app.modules.speech.pronunciation import compute_word_scores, generate_pronunciation_summary
+# from app.modules.speech.pronunciation import compute_word_scores, generate_pronunciation_summary
 import re
 
 _model = None
@@ -162,6 +162,10 @@ def extract_error_words(alignments, ref_words_list, hyp_words_list):
 
 
 def analyze_speech(audio_path: str, reference_text: str) -> dict:
+    from app.modules.speech.pronunciation import (
+    compute_word_scores,
+    generate_pronunciation_summary
+)
     model = get_model()
 
     segments, _ = model.transcribe(
