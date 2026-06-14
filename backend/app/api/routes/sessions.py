@@ -11,8 +11,13 @@ from app.db.models import Session, SpeechResult, FacialResult, PitchResult, Anal
 from app.api.schemas import SessionOut
 from app.core.config import settings
 from app.modules.speech.analyzer import analyze_speech
-# from app.modules.facial.analyzer import analyze_facial
-# from app.modules.facial.video_overlay import create_annotated_video
+from app.modules.facial.analyzer import analyze_facial
+from app.modules.facial.video_overlay import create_annotated_video
+import traceback
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -23,13 +28,20 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 
 
 async def save_upload(file: UploadFile) -> Path:
-    ext = Path(file.filename).suffix
-    filename = f"{uuid.uuid4().hex}{ext}"
-    path = UPLOAD_DIR / filename
-    async with aiofiles.open(path, "wb") as f:
-        content = await file.read()
-        await f.write(content)
-    return path
+    logger.info(f"save_upload: Saving file {file.filename}")
+    try:
+        ext = Path(file.filename).suffix
+        filename = f"{uuid.uuid4().hex}{ext}"
+        path = UPLOAD_DIR / filename
+        async with aiofiles.open(path, "wb") as f:
+            content = await file.read()
+            await f.write(content)
+        logger.info(f"save_upload: Successfully saved file to {path}")
+        return path
+    except Exception as e:
+        logger.error(f"save_upload: Failed to save file {file.filename}")
+        traceback.print_exc()
+        raise
 
 
 @router.post("/upload", response_model=SessionOut)
@@ -42,7 +54,15 @@ async def upload_and_analyze(
     reference_audio: Optional[UploadFile] = File(None),
     db: DBSession = Depends(get_db),
     ):
-    video_path = await save_upload(video)
+    logger.info(f"=== ENTERING UPLOAD ENDPOINT ===")
+    logger.info(f"Title: {title}, Mode: {mode}")
+    try:
+        video_path = await save_upload(video)
+        logger.info(f"File save success: {video_path}")
+    except Exception as e:
+        logger.error("Failed to save main video file")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
     # Save reference video if provided
     ref_video_path = None
@@ -52,20 +72,33 @@ async def upload_and_analyze(
     # Save reference audio if provided (for singing mode)
     ref_audio_path = None
     if reference_audio and reference_audio.filename:
-        ref_audio_path = await save_upload(reference_audio)
+        try:
+            ref_audio_path = await save_upload(reference_audio)
+            logger.info(f"Reference audio save success: {ref_audio_path}")
+        except Exception as e:
+            logger.error("Failed to save reference audio")
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=str(e))
 
-    session = Session(
-        title=title,
-        mode=mode,
-        video_path=str(video_path),
-        reference_text=reference_text,
-        reference_video_path=str(ref_video_path) if ref_video_path else None,
-        reference_audio_path=str(ref_audio_path) if ref_audio_path else None,
-        status=AnalysisStatus.processing,
-    )
-    db.add(session)
-    db.commit()
-    db.refresh(session)
+    logger.info("Before database commit (initial session creation)")
+    try:
+        session = Session(
+            title=title,
+            mode=mode,
+            video_path=str(video_path),
+            reference_text=reference_text,
+            reference_video_path=str(ref_video_path) if ref_video_path else None,
+            reference_audio_path=str(ref_audio_path) if ref_audio_path else None,
+            status=AnalysisStatus.processing,
+        )
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+        logger.info(f"After database commit (initial session creation). Session ID: {session.id}")
+    except Exception as e:
+        logger.error("Database commit failed during initial session creation")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
     try:
 
@@ -73,15 +106,15 @@ async def upload_and_analyze(
         file_ext = video_path.suffix.lower()
         is_audio_file = file_ext in ['.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac']
         
+        logger.info(f"Before FFmpeg. is_audio_file: {is_audio_file}")
         if is_audio_file:
             # If it's an audio file, use it directly (convert to wav for consistency)
             audio_path = video_path.with_suffix('').with_name(
                 video_path.stem + "_audio.wav"
             )
-            ret = os.system(
-                f'ffmpeg -i "{video_path}" -acodec pcm_s16le '
-                f'-ar 16000 -ac 1 "{audio_path}" -y -loglevel quiet'
-            )
+            cmd = f'ffmpeg -i "{video_path}" -acodec pcm_s16le -ar 16000 -ac 1 "{audio_path}" -y -loglevel quiet'
+            logger.info(f"Running FFmpeg: {cmd}")
+            ret = os.system(cmd)
             if ret != 0:
                 raise Exception(f"ffmpeg conversion failed with code {ret}. Is ffmpeg installed? Run: brew install ffmpeg")
         else:
@@ -89,12 +122,13 @@ async def upload_and_analyze(
             audio_path = video_path.with_suffix('').with_name(
                 video_path.stem + "_audio.wav"
             )
-            ret = os.system(
-                f'ffmpeg -i "{video_path}" -vn -acodec pcm_s16le '
-                f'-ar 16000 -ac 1 "{audio_path}" -y -loglevel quiet'
-            )
+            cmd = f'ffmpeg -i "{video_path}" -vn -acodec pcm_s16le -ar 16000 -ac 1 "{audio_path}" -y -loglevel quiet'
+            logger.info(f"Running FFmpeg: {cmd}")
+            ret = os.system(cmd)
             if ret != 0:
                 raise Exception(f"ffmpeg failed with code {ret}. Is ffmpeg installed? Run: brew install ffmpeg")
+
+        logger.info("After FFmpeg")
 
         if not audio_path.exists():
             raise Exception(f"Audio extraction failed — file not created at {audio_path}")
@@ -105,7 +139,7 @@ async def upload_and_analyze(
         # -- Facial Analysis (only for video files) --
         if not is_audio_file and session.mode in ['acting', 'full'] and not session.facial_result:
             try:
-                print(">>> Running facial analysis...")
+                logger.info("Before facial analysis")
                 facial_data = analyze_facial(
                     user_video_path=str(video_path),
                     reference_video_path=str(ref_video_path) if ref_video_path else None,
@@ -146,14 +180,15 @@ async def upload_and_analyze(
                     score_components=facial_data.get("score_components"),
                 )
                 db.commit()
+                logger.info("After facial analysis (success)")
             except Exception as e:
-                print(f"Error in facial analysis: {e}")
-                import traceback; traceback.print_exc()
+                logger.error(f"Error in facial analysis: {e}")
+                traceback.print_exc()
 
         # -- Speech Analysis --
         if session.mode in ['speech', 'full'] and not session.speech_result:
             try:
-                print(">>> Running speech analysis...")
+                logger.info("Before speech analysis")
                 speech_data = analyze_speech(
                     audio_path=str(audio_path),
                     reference_text=reference_text or "",
@@ -163,13 +198,15 @@ async def upload_and_analyze(
                     **speech_data,
                 )
                 db.commit()
+                logger.info("After speech analysis (success)")
             except Exception as e:
-                print(f"Error in speech analysis: {e}")
+                logger.error(f"Error in speech analysis: {e}")
+                traceback.print_exc()
 
         # -- Singing Analysis --
         if session.mode in ['singing', 'full'] and not session.pitch_result:
             try:
-                print(">>> Running singing analysis...")
+                logger.info("Before singing analysis")
                 if ref_audio_path and ref_audio_path.exists():
                     from app.modules.singing.analyzer import analyze_singing
                     cache_dir = str(UPLOAD_DIR / "singing_cache")
@@ -207,18 +244,27 @@ async def upload_and_analyze(
                         feedback_summary="No reference audio provided. Upload a reference track for full singing analysis.",
                     )
                     db.commit()
+                logger.info("After singing analysis (success)")
             except Exception as e:
-                print(f"Error in singing analysis: {e}")
-                import traceback; traceback.print_exc()
+                logger.error(f"Error in singing analysis: {e}")
+                traceback.print_exc()
 
+        logger.info("Before final database commit")
         session.status = AnalysisStatus.completed
         db.commit()
         db.refresh(session)
+        logger.info("After final database commit")
 
     except Exception as e:
-        session.status = AnalysisStatus.failed
-        session.error_message = str(e)
-        db.commit()
+        logger.error(f"=== UPLOAD FLOW FAILED WITH EXCEPTION ===")
+        traceback.print_exc()
+        try:
+            session.status = AnalysisStatus.failed
+            session.error_message = str(e)
+            db.commit()
+        except Exception as db_err:
+            logger.error(f"Failed to update session status to failed: {db_err}")
+            traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
     return session

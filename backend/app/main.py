@@ -57,6 +57,41 @@ def run_db_migrations():
         print(f">>> DB schema migration failed: {e}")
 
 # run_db_migrations()
+
+import os
+import shutil
+import subprocess
+import logging
+from pathlib import Path
+from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+logger.info("=== STARTUP DIAGNOSTICS ===")
+
+# Check FFmpeg
+ffmpeg_path = shutil.which("ffmpeg")
+logger.info(f"FFmpeg path: {ffmpeg_path}")
+if ffmpeg_path:
+    try:
+        ffmpeg_version = subprocess.check_output([ffmpeg_path, "-version"]).decode("utf-8").split("\n")[0]
+        logger.info(f"FFmpeg version: {ffmpeg_version}")
+    except Exception as e:
+        logger.error(f"Failed to get FFmpeg version: {e}")
+else:
+    logger.error("FFmpeg NOT FOUND in PATH! Video/Audio processing will fail.")
+
+# Check Upload Directory
+BASE_DIR = Path(__file__).resolve().parents[2]
+upload_dir_path = BASE_DIR / settings.UPLOAD_DIR
+logger.info(f"Upload directory path: {upload_dir_path}")
+logger.info(f"Upload directory exists before creation: {upload_dir_path.exists()}")
+upload_dir_path.mkdir(exist_ok=True, parents=True)
+logger.info(f"Upload directory exists after creation: {upload_dir_path.exists()}")
+
+logger.info("=== END STARTUP DIAGNOSTICS ===")
+
 print("BEFORE FASTAPI")
 app = FastAPI(
     title="AI Performing Arts Coach",
