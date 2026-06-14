@@ -23,7 +23,7 @@ from sqlalchemy import text
 print("STEP 8", flush=True)
 
 # Create all tables (safety net alongside Alembic)
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 def run_db_migrations():
     print(">>> Running manual DB schema migration for Singing Module...")
@@ -100,6 +100,22 @@ app = FastAPI(
 )
 print("AFTER FASTAPI")
 # Allow React dev server to talk to FastAPI
+# @app.on_event("startup")
+# async def startup_db():
+#     try:
+#         print("=== CREATING DATABASE TABLES ===", flush=True)
+
+#         # Import models so SQLAlchemy knows about all tables
+#         import app.db.models
+
+#         Base.metadata.create_all(bind=engine)
+
+#         print("=== DATABASE TABLES READY ===", flush=True)
+
+#     except Exception as e:
+#         print(f"=== DATABASE INIT FAILED: {e} ===", flush=True)
+#         raise
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
