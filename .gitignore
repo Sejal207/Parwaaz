@@ -12,3 +12,9 @@ backend/app/modules/speech/whisper_hindi/
 backend/whisper_final/kaggle/working/
 .vercel
 .env*
+
+node_modules
+frontend/node_modules
+backend/node_modules
+venv
+backend/venv
