@@ -23,7 +23,7 @@ from sqlalchemy import text
 print("STEP 8", flush=True)
 
 # Create all tables (safety net alongside Alembic)
-# Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 
 def run_db_migrations():
     print(">>> Running manual DB schema migration for Singing Module...")
