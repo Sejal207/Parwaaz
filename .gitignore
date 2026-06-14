@@ -10,3 +10,5 @@ __pycache__/
 
 backend/app/modules/speech/whisper_hindi/
 backend/whisper_final/kaggle/working/
+.vercel
+.env*

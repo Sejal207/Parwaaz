@@ -1,4 +1,6 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings
+from pathlib import Path
+
 
 class Settings(BaseSettings):
     DATABASE_URL: str
@@ -8,10 +10,8 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE_MB: int = 100
     WHISPER_MODEL: str = "small"
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        extra="ignore"
-    )
+    class Config:
+        env_file = ".env"
 
 
 settings = Settings()
