@@ -1,5 +1,7 @@
 import os
 import uuid
+import shutil
+import subprocess
 import aiofiles
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session as DBSession
@@ -107,26 +109,24 @@ async def upload_and_analyze(
         is_audio_file = file_ext in ['.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac']
         
         logger.info(f"Before FFmpeg. is_audio_file: {is_audio_file}")
+        ffmpeg_bin = shutil.which("ffmpeg") or ("/opt/homebrew/bin/ffmpeg" if os.path.exists("/opt/homebrew/bin/ffmpeg") else "ffmpeg")
+
+        audio_path = video_path.with_suffix('').with_name(
+            video_path.stem + "_audio.wav"
+        )
+        
         if is_audio_file:
-            # If it's an audio file, use it directly (convert to wav for consistency)
-            audio_path = video_path.with_suffix('').with_name(
-                video_path.stem + "_audio.wav"
-            )
-            cmd = f'ffmpeg -i "{video_path}" -acodec pcm_s16le -ar 16000 -ac 1 "{audio_path}" -y -loglevel quiet'
-            logger.info(f"Running FFmpeg: {cmd}")
-            ret = os.system(cmd)
-            if ret != 0:
-                raise Exception(f"ffmpeg conversion failed with code {ret}. Is ffmpeg installed? Run: brew install ffmpeg")
+            # If it's an audio file, convert to wav for consistency
+            cmd = [ffmpeg_bin, "-y", "-i", str(video_path), "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", str(audio_path)]
         else:
             # Extract audio from video
-            audio_path = video_path.with_suffix('').with_name(
-                video_path.stem + "_audio.wav"
-            )
-            cmd = f'ffmpeg -i "{video_path}" -vn -acodec pcm_s16le -ar 16000 -ac 1 "{audio_path}" -y -loglevel quiet'
-            logger.info(f"Running FFmpeg: {cmd}")
-            ret = os.system(cmd)
-            if ret != 0:
-                raise Exception(f"ffmpeg failed with code {ret}. Is ffmpeg installed? Run: brew install ffmpeg")
+            cmd = [ffmpeg_bin, "-y", "-i", str(video_path), "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", str(audio_path)]
+
+        logger.info(f"Running FFmpeg: {' '.join(cmd)}")
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        if res.returncode != 0:
+            logger.error(f"FFmpeg stderr: {res.stderr}")
+            raise Exception(f"ffmpeg failed with code {res.returncode}: {res.stderr}")
 
         logger.info("After FFmpeg")
 

@@ -137,30 +137,32 @@ export default function HomePage() {
           { id: 'singing', title: 'Singing', icon: Music, delay: '2.4s',
             desc: 'Pitch & rhythm tracking' }
         ].map(mod => (
-          <div key={mod.id} className="glass-card" style={{
-            flex: '1 1 250px',
-            padding: '32px 24px',
-            textAlign: 'center',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
-            opacity: visible ? 1 : 0,
-            transform: visible ? 'translateY(0)' : 'translateY(30px)',
-            transition: `all 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${mod.delay}`
-          }}>
-            <div style={{
-              width: '64px', height: '64px', borderRadius: '50%',
-              background: 'rgba(20,184,166,0.1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--accent-teal)'
+          <Link key={mod.id} to={`/upload?mode=${mod.id}`} style={{ textDecoration: 'none', flex: '1 1 250px' }}>
+            <div className="glass-card hover-glow" style={{
+              padding: '32px 24px',
+              textAlign: 'center',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
+              opacity: visible ? 1 : 0,
+              transform: visible ? 'translateY(0)' : 'translateY(30px)',
+              transition: `all 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${mod.delay}`,
+              height: '100%'
             }}>
-              <mod.icon size={32} style={{ animation: 'breathePulse 2s infinite alternate' }} />
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '50%',
+                background: 'rgba(20,184,166,0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'var(--accent-teal)'
+              }}>
+                <mod.icon size={32} style={{ animation: 'breathePulse 2s infinite alternate' }} />
+              </div>
+              <div>
+                <h3 className="text-h3" style={{ marginBottom: '8px', color: 'var(--text-primary)' }}>{mod.title}</h3>
+                <p className="text-body" style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                  {mod.desc}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-h3" style={{ marginBottom: '8px' }}>{mod.title}</h3>
-              <p className="text-body" style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                {mod.desc}
-              </p>
-            </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>

@@ -6,13 +6,14 @@ import ActingAnalysis from '../components/ActingAnalysis'
 import SpeechAnalysis from '../components/SpeechAnalysis'
 import PitchAnalysis from '../components/PitchAnalysis'
 
-const API = import.meta.env.VITE_API_URL 
+const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '') 
 
 export default function ResultPage() {
   const { id } = useParams()
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeDetail, setActiveDetail] = useState(null) // 'acting', 'speech', 'pitch', or null for dashboard
+  const [showToast, setShowToast] = useState(false)
 
   useEffect(() => {
     getSession(id).then(r => {
@@ -74,6 +75,12 @@ export default function ResultPage() {
     URL.revokeObjectURL(url)
   }
 
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href)
+    setShowToast(true)
+    setTimeout(() => setShowToast(false), 3000)
+  }
+
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto', animation: 'slideUpFade 0.6s ease' }}>
       
@@ -90,7 +97,7 @@ export default function ResultPage() {
           <h1 className="text-h2" style={{ color: 'var(--text-primary)' }}>{session.title}</h1>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <button className="pill-button" style={{ background: 'var(--surface-muted)', color: 'var(--text-primary)', boxShadow: 'none' }}>Share</button>
+          <button className="pill-button" onClick={handleShare} style={{ background: 'var(--surface-muted)', color: 'var(--text-primary)', boxShadow: 'none' }}>Share</button>
           <button className="pill-button" onClick={handleExport}>Export</button>
         </div>
       </div>
@@ -237,6 +244,13 @@ export default function ResultPage() {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: 'var(--accent-teal)', color: '#000', padding: '12px 24px', borderRadius: 100, fontWeight: 600, animation: 'slideUpFade 0.3s ease', zIndex: 9999, boxShadow: '0 8px 32px rgba(20,184,166,0.3)' }}>
+          Link copied to clipboard!
         </div>
       )}
 

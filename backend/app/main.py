@@ -100,30 +100,29 @@ app = FastAPI(
 )
 print("AFTER FASTAPI")
 # Allow React dev server to talk to FastAPI
-# @app.on_event("startup")
-# async def startup_db():
-#     try:
-#         print("=== CREATING DATABASE TABLES ===", flush=True)
-
-#         # Import models so SQLAlchemy knows about all tables
-#         import app.db.models
-
-#         Base.metadata.create_all(bind=engine)
-
-#         print("=== DATABASE TABLES READY ===", flush=True)
-
-#     except Exception as e:
-#         print(f"=== DATABASE INIT FAILED: {e} ===", flush=True)
-#         raise
+@app.on_event("startup")
+async def startup_db():
+    try:
+        logger.info("=== CREATING DATABASE TABLES ===")
+        import app.db.models
+        Base.metadata.create_all(bind=engine)
+        run_db_migrations()
+        logger.info("=== DATABASE TABLES READY ===")
+    except Exception as e:
+        logger.error(f"=== DATABASE INIT FAILED: {e} ===")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
+        "http://127.0.0.1:5173",
         "http://localhost:5174",
+        "http://127.0.0.1:5174",
         "http://localhost:3000",
+        "http://127.0.0.1:3000",
         "https://parwaaz-mocha.vercel.app",
     ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

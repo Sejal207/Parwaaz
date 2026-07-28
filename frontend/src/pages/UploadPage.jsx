@@ -1,11 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { uploadSession } from '../api'
 import { Camera, Upload, Info, CheckCircle2, Loader2, Sparkles, Mic, Music, Square, Play, AlignLeft, Video } from 'lucide-react'
 
 export default function UploadPage() {
   const navigate = useNavigate()
-  const [performanceType, setPerformanceType] = useState('full') // 'acting', 'speech', 'singing', 'full'
+  const location = useLocation()
+
+  // Parse mode from query string if available (e.g. /upload?mode=speech)
+  const queryParams = new URLSearchParams(location.search)
+  const initialMode = queryParams.get('mode') || 'acting'
+
+  const [performanceType, setPerformanceType] = useState(
+    ['acting', 'speech', 'singing'].includes(initialMode) ? initialMode : 'acting'
+  )
   const [title, setTitle] = useState('')
   const [referenceText, setReferenceText] = useState('')
   
@@ -28,23 +36,23 @@ export default function UploadPage() {
   const [error, setError] = useState('')
 
   const handleUploadClick = () => {
-    if (!title) {
+    if (!title.trim()) {
       setError('Please enter a performance title')
       return
     }
     if (!video) {
-      setError('Please select or record a video')
+      setError('Please select or upload a video file')
       return
     }
-    if ((performanceType === 'speech' || performanceType === 'full') && !referenceText.trim()) {
+    if (performanceType === 'speech' && !referenceText.trim()) {
       setError('Please provide the reference text for speech analysis')
       return
     }
-    if ((performanceType === 'acting' || performanceType === 'full') && !referenceVideo) {
+    if (performanceType === 'acting' && !referenceVideo) {
       setError('Please provide a reference video for acting analysis')
       return
     }
-    if ((performanceType === 'singing' || performanceType === 'full') && !referenceAudio) {
+    if (performanceType === 'singing' && !referenceAudio) {
       setError('Please provide a reference audio track for singing analysis')
       return
     }
@@ -53,30 +61,24 @@ export default function UploadPage() {
     setIsUploading(true)
 
     const fd = new FormData()
-    fd.append('title', title)
+    fd.append('title', title.trim())
     fd.append('mode', performanceType)
-    
-    if (performanceType === 'speech' || performanceType === 'full') {
-      fd.append('reference_text', referenceText)
-    } else {
-      fd.append('reference_text', '') // Backend might expect the field
-    }
-
+    fd.append('reference_text', performanceType === 'speech' ? referenceText.trim() : '')
     fd.append('video', video)
     
-    if (performanceType === 'acting' || performanceType === 'full') {
-      if (referenceVideo) fd.append('reference_video', referenceVideo)
+    if (performanceType === 'acting' && referenceVideo) {
+      fd.append('reference_video', referenceVideo)
     }
-
-    if (performanceType === 'singing' || performanceType === 'full') {
-      if (referenceAudio) fd.append('reference_audio', referenceAudio)
+    if (performanceType === 'singing' && referenceAudio) {
+      fd.append('reference_audio', referenceAudio)
     }
 
     uploadSession(fd, setProgress)
       .then(res => {
+        setProgress(100)
         setTimeout(() => {
           navigate(`/result/${res.data.id}`)
-        }, 1500)
+        }, 1000)
       })
       .catch(err => {
         setError(err.response?.data?.detail || 'Upload failed. Please try again.')
@@ -85,13 +87,13 @@ export default function UploadPage() {
   }
 
   const isRecordDisabled = true // completely removing record feature
-  const needsRefText = performanceType === 'speech' || performanceType === 'full'
-  const needsRefVideo = performanceType === 'acting' || performanceType === 'full'
-  const needsRefAudio = performanceType === 'singing' || performanceType === 'full'
+  const needsRefText = performanceType === 'speech'
+  const needsRefVideo = performanceType === 'acting'
+  const needsRefAudio = performanceType === 'singing'
 
   // --- Processing Screen ---
   if (isUploading) {
-    return <ProcessingScreen progress={progress} />
+    return <ProcessingScreen progress={progress} mode={performanceType} />
   }
 
   // --- Selection Screen ---
@@ -133,10 +135,9 @@ export default function UploadPage() {
         {/* Performance Type Pills */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
           {[
-            { id: 'acting', label: 'Acting' },
-            { id: 'speech', label: 'Speech' },
-            { id: 'singing', label: 'Singing' },
-            { id: 'full', label: 'All Three' }
+            { id: 'acting', label: 'Acting (Facial Analysis)' },
+            { id: 'speech', label: 'Speech (Pronunciation)' },
+            { id: 'singing', label: 'Singing (Pitch & Timing)' }
           ].map(type => (
             <div key={type.id}
               onClick={() => setPerformanceType(type.id)}
@@ -531,94 +532,138 @@ function LiveRecorder({ onRecordingComplete }) {
   )
 }
 
-// --- Processing Screen Component ---
-function ProcessingScreen({ progress }) {
-  const INSIGHTS = [
-    "Detecting micro-expressions...",
-    "Mapping vocal pitch contours...",
-    "Analyzing rhythmic patterns...",
-    "Correlating emotion with delivery..."
+function ProcessingScreen({ progress, mode = 'acting' }) {
+  const [simulatedProgress, setSimulatedProgress] = useState(progress)
+  const [currentStep, setCurrentStep] = useState(0)
+
+  const STEPS = [
+    { title: 'Uploading Files', desc: 'Transferring video & reference media to AI engine...' },
+    { title: 'Audio Extraction', desc: 'Converting media streams with FFmpeg...' },
+    { title: 'AI Neural Inference', desc: mode === 'acting' ? 'Analyzing facial expressions & emotional contours...' : mode === 'speech' ? 'Scoring speech pronunciation & fluency...' : 'Tracking vocal pitch accuracy & rhythm timing...' },
+    { title: 'Generating Feedback', desc: 'Structuring performance analytics & report summary...' }
   ]
-  const [insightIndex, setInsightIndex] = useState(0)
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setInsightIndex(i => (i + 1) % INSIGHTS.length)
-    }, 3000)
-    return () => clearInterval(id)
+    // If real progress comes from axios upload event, use it up to 50%
+    if (progress > simulatedProgress) {
+      setSimulatedProgress(progress)
+    }
+  }, [progress])
+
+  useEffect(() => {
+    // Increment simulated progress smoothly for long AI inference steps
+    const timer = setInterval(() => {
+      setSimulatedProgress((prev) => {
+        if (prev >= 98) return 98
+        const stepInc = prev < 30 ? 5 : prev < 70 ? 2 : 1
+        return prev + stepInc
+      })
+    }, 400)
+    return () => clearInterval(timer)
   }, [])
 
-  const radius = 60
+  useEffect(() => {
+    if (simulatedProgress < 25) setCurrentStep(0)
+    else if (simulatedProgress < 55) setCurrentStep(1)
+    else if (simulatedProgress < 85) setCurrentStep(2)
+    else setCurrentStep(3)
+  }, [simulatedProgress])
+
+  const radius = 70
   const circumference = 2 * Math.PI * radius
-  const strokeDashoffset = circumference - (progress / 100) * circumference
+  const strokeDashoffset = circumference - (simulatedProgress / 100) * circumference
+
+  const modeIcons = {
+    acting: { icon: Sparkles, label: 'Acting Analysis', color: 'var(--accent-teal)' },
+    speech: { icon: Mic, label: 'Speech Analysis', color: '#F59E0B' },
+    singing: { icon: Music, label: 'Singing Analysis', color: '#8B5CF6' }
+  }
+
+  const ActiveIcon = modeIcons[mode]?.icon || Sparkles
+  const activeColor = modeIcons[mode]?.color || 'var(--accent-teal)'
 
   return (
     <div style={{
-      maxWidth: 800, margin: '0 auto', textAlign: 'center',
-      animation: 'fadeScale 0.8s ease',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 40,
-      paddingTop: 40
+      maxWidth: 720, margin: '0 auto', textAlign: 'center',
+      animation: 'fadeScale 0.6s ease',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32,
+      paddingTop: 30, paddingBottom: 60
     }}>
       
-      {/* Video Thumbnail / Progress Ring */}
-      <div style={{ position: 'relative', width: 200, height: 200 }}>
-        <svg width="200" height="200" style={{ transform: 'rotate(-90deg)' }}>
-          <circle cx="100" cy="100" r={radius} fill="none" stroke="rgba(20,184,166,0.2)" strokeWidth="8" />
-          <circle cx="100" cy="100" r={radius} fill="none" stroke="var(--accent-teal)" strokeWidth="8"
+      {/* Active Mode Badge */}
+      <div style={{
+        display: 'inline-flex', alignItems: 'center', gap: 8,
+        padding: '8px 20px', borderRadius: '999px',
+        background: 'rgba(255,255,255,0.7)',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.05)',
+        border: '1px solid rgba(255,255,255,0.8)'
+      }}>
+        <ActiveIcon size={18} color={activeColor} />
+        <span className="text-h3" style={{ fontSize: 14, color: 'var(--text-primary)' }}>
+          {modeIcons[mode]?.label || 'Performance Analysis'}
+        </span>
+      </div>
+
+      {/* Progress Ring */}
+      <div style={{ position: 'relative', width: 220, height: 220 }}>
+        <svg width="220" height="220" style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx="110" cy="110" r={radius} fill="none" stroke="rgba(20,184,166,0.15)" strokeWidth="10" />
+          <circle cx="110" cy="110" r={radius} fill="none" stroke={activeColor} strokeWidth="10"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
-            style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+            style={{ transition: 'stroke-dashoffset 0.4s ease' }}
           />
         </svg>
         <div style={{
           position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexDirection: 'column'
         }}>
-          <span className="font-brand" style={{ fontSize: 48, color: 'var(--accent-deep)', lineHeight: 1 }}>
-            {progress}%
+          <span className="font-brand" style={{ fontSize: 52, color: 'var(--text-primary)', lineHeight: 1 }}>
+            {Math.round(simulatedProgress)}%
+          </span>
+          <span className="text-caption" style={{ color: 'var(--text-secondary)', marginTop: 4 }}>
+            Processing
           </span>
         </div>
       </div>
 
-      <h2 className="text-h2" style={{ color: 'var(--text-primary)' }}>
-        Analyzing your performance...
-      </h2>
-
-      {/* Module Status Cards */}
-      <div style={{ display: 'flex', gap: 16, width: '100%', justifyContent: 'center' }}>
-        {[
-          { icon: Sparkles, label: 'Acting' },
-          { icon: Mic, label: 'Speech' },
-          { icon: Music, label: 'Singing' }
-        ].map((m, i) => (
-          <div key={m.label} className="glass-card" style={{
-            flex: '1', padding: '20px 16px', display: 'flex', alignItems: 'center', gap: 12,
-            animation: `slideUpFade 0.6s ease ${i * 0.2}s both`
-          }}>
-            <m.icon size={24} color="var(--accent-teal)" />
-            <div style={{ textAlign: 'left', flex: 1 }}>
-              <p className="text-h3" style={{ fontSize: 16 }}>{m.label}</p>
-              <div style={{ width: '100%', height: 4, background: 'rgba(20,184,166,0.2)', borderRadius: 2, marginTop: 8, overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%', background: 'var(--accent-teal)',
-                  width: progress > (i * 30) ? '100%' : '0%',
-                  transition: 'width 2s ease'
-                }}/>
-              </div>
-            </div>
-          </div>
-        ))}
+      <div>
+        <h2 className="text-h2" style={{ color: 'var(--text-primary)', marginBottom: 8 }}>
+          {STEPS[currentStep].title}
+        </h2>
+        <p className="text-body" style={{ color: 'var(--text-secondary)', fontSize: 15 }}>
+          {STEPS[currentStep].desc}
+        </p>
       </div>
 
-      {/* Animated Insight Text */}
-      <div style={{ height: 40, overflow: 'hidden' }}>
-        <p className="text-artistic" key={insightIndex} style={{
-          color: 'var(--text-secondary)',
-          animation: 'slideUpFade 0.5s ease both'
-        }}>
-          {INSIGHTS[insightIndex]}
-        </p>
+      {/* Stages Stepper */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, width: '100%', marginTop: 12 }}>
+        {STEPS.map((s, idx) => {
+          const isDone = idx < currentStep
+          const isCurrent = idx === currentStep
+          return (
+            <div key={idx} className="glass-card" style={{
+              padding: '16px 12px', textAlign: 'center',
+              borderTop: `3px solid ${isDone || isCurrent ? activeColor : 'rgba(0,0,0,0.1)'}`,
+              opacity: isDone || isCurrent ? 1 : 0.4,
+              transition: 'all 0.3s ease'
+            }}>
+              <div style={{
+                width: 24, height: 24, borderRadius: '50%', margin: '0 auto 8px',
+                background: isDone ? activeColor : isCurrent ? 'rgba(20,184,166,0.2)' : 'rgba(0,0,0,0.05)',
+                color: isDone ? 'white' : activeColor,
+                fontSize: 12, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                {isDone ? <CheckCircle2 size={14} /> : idx + 1}
+              </div>
+              <span className="text-caption" style={{ fontWeight: 600, display: 'block', fontSize: 11 }}>
+                {s.title}
+              </span>
+            </div>
+          )
+        })}
       </div>
 
     </div>

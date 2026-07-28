@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Play, Pause, Volume2, TrendingUp, Music2, Zap, Target } from 'lucide-react'
 
-const API = import.meta.env.VITE_API_URL 
+const API = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '') 
 
 export default function PitchAnalysis({ result, session }) {
   const [userAudioPlaying, setUserAudioPlaying] = useState(false)

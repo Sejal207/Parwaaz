@@ -2,13 +2,18 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { listSessions, deleteSession } from '../api'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts'
-import { PlayCircle, Trophy, Target, Star, Mic, Sparkles, TrendingUp, Lock, Music } from 'lucide-react'
+import { PlayCircle, Trophy, Target, Star, Mic, Sparkles, TrendingUp, Lock, Music, Trash2, ChevronDown, X } from 'lucide-react'
 
 const MODE_LABEL = { full:'Full', speech:'Speech', acting:'Acting', singing:'Singing' }
 
 export default function HistoryPage() {
   const [sessions, setSessions] = useState([])
   const [loading, setLoading]   = useState(true)
+  const [filterMode, setFilterMode] = useState('all')
+  const [showGoalsModal, setShowGoalsModal] = useState(false)
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false)
+
+  const filteredSessions = filterMode === 'all' ? sessions : sessions.filter(s => s.mode === filterMode)
 
   const load = async () => {
     const r = await listSessions()
@@ -37,10 +42,10 @@ export default function HistoryPage() {
   }
 
   const buildProgressData = () => {
-    if (!sessions.length) return []
+    if (!filteredSessions.length) return []
 
     const byDate = {}
-    sessions.forEach((s) => {
+    filteredSessions.forEach((s) => {
       const date = new Date(s.created_at)
       const key = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
       const scores = getSessionScores(s)
@@ -64,7 +69,7 @@ export default function HistoryPage() {
 
   const progressData = buildProgressData()
 
-  const moduleSeries = sessions
+  const moduleSeries = filteredSessions
     .map((s) => ({
       created_at: s.created_at,
       ...getSessionScores(s),
@@ -115,9 +120,30 @@ export default function HistoryPage() {
           <h1 className="text-h1" style={{ color: 'var(--text-primary)' }}>Your Journey</h1>
           <p className="text-body" style={{ color: 'var(--text-secondary)' }}>Track your progress over time.</p>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button className="pill-button" style={{ background: 'var(--surface-muted)', color: 'var(--text-primary)', boxShadow: 'none' }}>Filter</button>
-          <button className="pill-button" style={{ background: 'var(--surface-muted)', color: 'var(--text-primary)', boxShadow: 'none' }}>Goals</button>
+        <div style={{ display: 'flex', gap: 12, position: 'relative' }}>
+          <button 
+            className="pill-button" 
+            onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+            style={{ background: 'var(--surface-muted)', color: 'var(--text-primary)', boxShadow: 'none', display: 'flex', gap: 8, alignItems: 'center' }}>
+            {filterMode === 'all' ? 'All Modes' : MODE_LABEL[filterMode]} <ChevronDown size={16} />
+          </button>
+          
+          {showFilterDropdown && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 8, background: 'var(--surface)', border: '1px solid var(--surface-muted)', borderRadius: 12, padding: 8, display: 'flex', flexDirection: 'column', gap: 4, zIndex: 100, width: 140, boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+              {['all', 'acting', 'speech', 'singing'].map(m => (
+                <button key={m} onClick={() => { setFilterMode(m); setShowFilterDropdown(false); }} style={{ background: filterMode === m ? 'var(--surface-muted)' : 'transparent', color: 'var(--text-primary)', border: 'none', padding: '8px 12px', textAlign: 'left', borderRadius: 8, cursor: 'pointer' }}>
+                  {m === 'all' ? 'All Modes' : MODE_LABEL[m]}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <button 
+            className="pill-button" 
+            onClick={() => setShowGoalsModal(true)}
+            style={{ background: 'var(--surface-muted)', color: 'var(--text-primary)', boxShadow: 'none' }}>
+            Goals
+          </button>
         </div>
       </div>
 
@@ -185,43 +211,50 @@ export default function HistoryPage() {
         
         {loading ? (
           <p className="text-body" style={{ color: 'var(--text-secondary)' }}>Loading archive...</p>
-        ) : sessions.length === 0 ? (
+        ) : filteredSessions.length === 0 ? (
           <div className="glass-card" style={{ padding: '40px', textAlign: 'center' }}>
-            <p className="text-body" style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>No performances recorded yet.</p>
+            <p className="text-body" style={{ color: 'var(--text-secondary)', marginBottom: '16px' }}>No performances match your criteria.</p>
             <Link to="/upload" style={{ textDecoration: 'none' }}><button className="pill-button">Start First Analysis</button></Link>
           </div>
         ) : (
           <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '16px', scrollbarWidth: 'none' }}>
-            {sessions.map((s, i) => (
-              <Link to={`/result/${s.id}`} key={s.id} style={{ textDecoration: 'none' }}>
-                <div className="glass-card" style={{ 
-                  minWidth: '240px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px',
-                  borderTop: i === 0 ? '3px solid var(--accent-teal)' : '1px solid rgba(255,255,255,0.3)'
-                }}>
-                  {/* Thumbnail Placeholder */}
-                  <div style={{ width: '100%', height: '120px', background: '#000', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <PlayCircle size={32} color="rgba(255,255,255,0.5)" />
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                      <span className="text-caption" style={{ color: 'var(--accent-teal)' }}>
-                        {new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </span>
-                      {i === 0 && <span className="text-caption" style={{ background: 'rgba(20,184,166,0.1)', color: 'var(--accent-teal)', padding: '2px 6px', borderRadius: 100 }}>New</span>}
+            {filteredSessions.map((s, i) => (
+              <div key={s.id} style={{ position: 'relative' }}>
+                <Link to={`/result/${s.id}`} style={{ textDecoration: 'none' }}>
+                  <div className="glass-card" style={{ 
+                    minWidth: '240px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px',
+                    borderTop: i === 0 ? '3px solid var(--accent-teal)' : '1px solid rgba(255,255,255,0.3)'
+                  }}>
+                    {/* Thumbnail Placeholder */}
+                    <div style={{ width: '100%', height: '120px', background: '#000', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <PlayCircle size={32} color="rgba(255,255,255,0.5)" />
                     </div>
-                    <p className="text-body" style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {s.title}
-                    </p>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <span className="text-caption" style={{ color: 'var(--accent-teal)' }}>
+                          {new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                        {i === 0 && <span className="text-caption" style={{ background: 'rgba(20,184,166,0.1)', color: 'var(--accent-teal)', padding: '2px 6px', borderRadius: 100 }}>New</span>}
+                      </div>
+                      <p className="text-body" style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {s.title}
+                      </p>
+                    </div>
+                    
+                    {/* Sparkline placeholder */}
+                    <div style={{ height: '24px', display: 'flex', alignItems: 'flex-end', gap: '2px', opacity: 0.7 }}>
+                      {[...Array(10)].map((_, idx) => (
+                        <div key={idx} style={{ flex: 1, background: 'var(--accent-teal)', borderRadius: '1px', height: `${Math.random() * 80 + 20}%` }} />
+                      ))}
+                    </div>
                   </div>
-                  
-                  {/* Sparkline placeholder */}
-                  <div style={{ height: '24px', display: 'flex', alignItems: 'flex-end', gap: '2px', opacity: 0.7 }}>
-                    {[...Array(10)].map((_, idx) => (
-                      <div key={idx} style={{ flex: 1, background: 'var(--accent-teal)', borderRadius: '1px', height: `${Math.random() * 80 + 20}%` }} />
-                    ))}
-                  </div>
-                </div>
-              </Link>
+                </Link>
+                <button 
+                  onClick={(e) => del(e, s.id)} 
+                  style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(239, 68, 68, 0.2)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(4px)' }}>
+                  <Trash2 size={14} color="#EF4444" />
+                </button>
+              </div>
             ))}
           </div>
         )}
@@ -280,6 +313,39 @@ export default function HistoryPage() {
           "Your emotional expression has improved 23% since your first performance. Focus on breath control to unlock further growth in singing."
         </p>
       </div>
+
+      {/* Goals Modal */}
+      {showGoalsModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', animation: 'fadeIn 0.3s ease' }} onClick={() => setShowGoalsModal(false)} />
+          <div className="glass-panel" style={{ position: 'relative', width: '100%', maxWidth: 500, padding: 32, animation: 'slideUpFade 0.4s ease' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h2 className="text-h2">Your Milestones</h2>
+              <button onClick={() => setShowGoalsModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={24} /></button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {[
+                { title: 'Upload 5 performances', progress: Math.min(sessions.length, 5), total: 5, color: 'var(--accent-teal)' },
+                { title: 'Achieve 80%+ in Acting', progress: Math.min(moduleSeries.filter(s => s.acting && s.acting >= 80).length, 1), total: 1, color: '#F59E0B' },
+                { title: 'Maintain a 3-day streak', progress: 1, total: 3, color: '#8B5CF6' }
+              ].map((goal, idx) => (
+                <div key={idx} style={{ background: 'var(--surface-muted)', borderRadius: 12, padding: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <span className="text-body" style={{ fontWeight: 600 }}>{goal.title}</span>
+                    <span className="text-caption">{goal.progress} / {goal.total}</span>
+                  </div>
+                  <div style={{ width: '100%', height: 8, background: 'rgba(0,0,0,0.2)', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ width: `${(goal.progress / goal.total) * 100}%`, height: '100%', background: goal.color, transition: 'width 1s ease-out' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button className="pill-button" onClick={() => setShowGoalsModal(false)} style={{ width: '100%', marginTop: 24 }}>Close</button>
+          </div>
+        </div>
+      )}
 
     </div>
   )
