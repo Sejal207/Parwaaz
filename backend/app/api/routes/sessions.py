@@ -3,12 +3,12 @@ import uuid
 import shutil
 import subprocess
 import aiofiles
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from sqlalchemy.orm import Session as DBSession
 from typing import Optional, List
 from pathlib import Path
 
-from app.db.database import get_db
+from app.db.database import get_db, SessionLocal
 from app.db.models import Session, SpeechResult, FacialResult, PitchResult, AnalysisStatus, PerformanceMode
 from app.api.schemas import SessionOut
 from app.core.config import settings
@@ -46,69 +46,27 @@ async def save_upload(file: UploadFile) -> Path:
         raise
 
 
-@router.post("/upload", response_model=SessionOut)
-async def upload_and_analyze(
-    title: str = Form(...),
-    mode: PerformanceMode = Form(PerformanceMode.full),
-    reference_text: Optional[str] = Form(None),
-    video: UploadFile = File(...),
-    reference_video: Optional[UploadFile] = File(None),
-    reference_audio: Optional[UploadFile] = File(None),
-    db: DBSession = Depends(get_db),
-    ):
-    logger.info(f"=== ENTERING UPLOAD ENDPOINT ===")
-    logger.info(f"Title: {title}, Mode: {mode}")
+def run_analysis_background(session_id: int):
+    logger.info(f"=== STARTING BACKGROUND ANALYSIS FOR SESSION {session_id} ===")
+    db = SessionLocal()
     try:
-        video_path = await save_upload(video)
-        logger.info(f"File save success: {video_path}")
-    except Exception as e:
-        logger.error("Failed to save main video file")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        session = db.query(Session).filter(Session.id == session_id).first()
+        if not session:
+            logger.error(f"Background task: Session {session_id} not found")
+            return
 
-    # Save reference video if provided
-    ref_video_path = None
-    if reference_video and reference_video.filename:
-        ref_video_path = await save_upload(reference_video)
+        video_path = Path(session.video_path) if session.video_path else None
+        ref_video_path = Path(session.reference_video_path) if session.reference_video_path else None
+        ref_audio_path = Path(session.reference_audio_path) if session.reference_audio_path else None
 
-    # Save reference audio if provided (for singing mode)
-    ref_audio_path = None
-    if reference_audio and reference_audio.filename:
-        try:
-            ref_audio_path = await save_upload(reference_audio)
-            logger.info(f"Reference audio save success: {ref_audio_path}")
-        except Exception as e:
-            logger.error("Failed to save reference audio")
-            traceback.print_exc()
-            raise HTTPException(status_code=500, detail=str(e))
-
-    logger.info("Before database commit (initial session creation)")
-    try:
-        session = Session(
-            title=title,
-            mode=mode,
-            video_path=str(video_path),
-            reference_text=reference_text,
-            reference_video_path=str(ref_video_path) if ref_video_path else None,
-            reference_audio_path=str(ref_audio_path) if ref_audio_path else None,
-            status=AnalysisStatus.processing,
-        )
-        db.add(session)
-        db.commit()
-        db.refresh(session)
-        logger.info(f"After database commit (initial session creation). Session ID: {session.id}")
-    except Exception as e:
-        logger.error("Database commit failed during initial session creation")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
-
-    try:
+        if not video_path or not video_path.exists():
+            raise Exception(f"Video file not found at {video_path}")
 
         # Check if uploaded file is audio or video
         file_ext = video_path.suffix.lower()
         is_audio_file = file_ext in ['.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac']
         
-        logger.info(f"Before FFmpeg. is_audio_file: {is_audio_file}")
+        logger.info(f"Starting FFmpeg... is_audio_file: {is_audio_file}")
         ffmpeg_bin = shutil.which("ffmpeg")
         if not ffmpeg_bin and os.path.exists("/opt/homebrew/bin/ffmpeg"):
             ffmpeg_bin = "/opt/homebrew/bin/ffmpeg"
@@ -124,10 +82,8 @@ async def upload_and_analyze(
         )
         
         if is_audio_file:
-            # If it's an audio file, convert to wav for consistency
             cmd = [ffmpeg_bin, "-y", "-i", str(video_path), "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", str(audio_path)]
         else:
-            # Extract audio from video
             cmd = [ffmpeg_bin, "-y", "-i", str(video_path), "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1", str(audio_path)]
 
         logger.info(f"Running FFmpeg: {' '.join(cmd)}")
@@ -136,7 +92,7 @@ async def upload_and_analyze(
             logger.error(f"FFmpeg stderr: {res.stderr}")
             raise Exception(f"ffmpeg failed with code {res.returncode}: {res.stderr}")
 
-        logger.info("After FFmpeg")
+        logger.info("Finished FFmpeg.")
 
         if not audio_path.exists():
             raise Exception(f"Audio extraction failed — file not created at {audio_path}")
@@ -144,16 +100,15 @@ async def upload_and_analyze(
         session.audio_path = str(audio_path)
         db.commit()
 
-        # -- Facial Analysis (only for video files) --
+        # -- Facial Analysis --
         if not is_audio_file and session.mode in ['acting', 'full'] and not session.facial_result:
             try:
-                logger.info("Before facial analysis")
+                logger.info("Starting Facial Analysis...")
                 facial_data = analyze_facial(
                     user_video_path=str(video_path),
                     reference_video_path=str(ref_video_path) if ref_video_path else None,
                 )
 
-                # Annotated video overlay
                 try:
                     annotated_path = create_annotated_video(
                         str(video_path),
@@ -161,7 +116,6 @@ async def upload_and_analyze(
                         str(UPLOAD_DIR),
                         {k: v / 100 for k, v in facial_data["emotion_percentages"].items()},
                     )
-                    # Re-encode to H.264 so browsers can play it
                     h264_path = annotated_path.replace('.mp4', '_h264.mp4')
                     convert_res = subprocess.run(
                         [ffmpeg_bin, "-i", annotated_path, "-c:v", "libx264", "-preset", "fast",
@@ -169,13 +123,12 @@ async def upload_and_analyze(
                          h264_path, "-y", "-loglevel", "quiet"],
                         capture_output=True
                     )
-                    convert_ret = convert_res.returncode
-                    if convert_ret == 0 and Path(h264_path).exists():
+                    if convert_res.returncode == 0 and Path(h264_path).exists():
                         os.remove(annotated_path)
                         annotated_path = h264_path
                     session.annotated_video_path = str(annotated_path)
                 except Exception as overlay_err:
-                    print(f"[Facial] Annotated video failed (non-fatal): {overlay_err}")
+                    logger.error(f"[Facial] Annotated video failed (non-fatal): {overlay_err}")
 
                 session.facial_result = FacialResult(
                     session_id=session.id,
@@ -190,7 +143,7 @@ async def upload_and_analyze(
                     score_components=facial_data.get("score_components"),
                 )
                 db.commit()
-                logger.info("After facial analysis (success)")
+                logger.info("Finished Facial Analysis.")
             except Exception as e:
                 logger.error(f"Error in facial analysis: {e}")
                 traceback.print_exc()
@@ -198,17 +151,17 @@ async def upload_and_analyze(
         # -- Speech Analysis --
         if session.mode in ['speech', 'full'] and not session.speech_result:
             try:
-                logger.info("Before speech analysis")
+                logger.info("Starting Speech Analysis...")
                 speech_data = analyze_speech(
                     audio_path=str(audio_path),
-                    reference_text=reference_text or "",
+                    reference_text=session.reference_text or "",
                 )
                 session.speech_result = SpeechResult(
                     session_id=session.id,
                     **speech_data,
                 )
                 db.commit()
-                logger.info("After speech analysis (success)")
+                logger.info("Finished Speech Analysis.")
             except Exception as e:
                 logger.error(f"Error in speech analysis: {e}")
                 traceback.print_exc()
@@ -216,7 +169,7 @@ async def upload_and_analyze(
         # -- Singing Analysis --
         if session.mode in ['singing', 'full'] and not session.pitch_result:
             try:
-                logger.info("Before singing analysis")
+                logger.info("Starting Singing Analysis...")
                 if ref_audio_path and ref_audio_path.exists():
                     from app.modules.singing.analyzer import analyze_singing
                     cache_dir = str(UPLOAD_DIR / "singing_cache")
@@ -254,30 +207,87 @@ async def upload_and_analyze(
                         feedback_summary="No reference audio provided. Upload a reference track for full singing analysis.",
                     )
                     db.commit()
-                logger.info("After singing analysis (success)")
+                logger.info("Finished Singing Analysis.")
             except Exception as e:
                 logger.error(f"Error in singing analysis: {e}")
                 traceback.print_exc()
 
-        logger.info("Before final database commit")
+        logger.info("Updating database... Analysis completed.")
         session.status = AnalysisStatus.completed
         db.commit()
-        db.refresh(session)
-        logger.info("After final database commit")
 
     except Exception as e:
-        logger.error(f"=== UPLOAD FLOW FAILED WITH EXCEPTION ===")
+        logger.error(f"=== BACKGROUND WORKER FAILED WITH EXCEPTION: {e} ===")
         traceback.print_exc()
         try:
-            session.status = AnalysisStatus.failed
-            session.error_message = str(e)
-            db.commit()
+            session = db.query(Session).filter(Session.id == session_id).first()
+            if session:
+                session.status = AnalysisStatus.failed
+                session.error_message = str(e)
+                db.commit()
         except Exception as db_err:
             logger.error(f"Failed to update session status to failed: {db_err}")
-            traceback.print_exc()
+    finally:
+        db.close()
+
+
+@router.post("/upload", response_model=SessionOut)
+async def upload_and_analyze(
+    background_tasks: BackgroundTasks,
+    title: str = Form(...),
+    mode: PerformanceMode = Form(PerformanceMode.full),
+    reference_text: Optional[str] = Form(None),
+    video: UploadFile = File(...),
+    reference_video: Optional[UploadFile] = File(None),
+    reference_audio: Optional[UploadFile] = File(None),
+    db: DBSession = Depends(get_db),
+    ):
+    logger.info(f"=== ENTERING LIGHTWEIGHT UPLOAD ENDPOINT ===")
+    logger.info(f"Title: {title}, Mode: {mode}")
+    try:
+        video_path = await save_upload(video)
+        logger.info(f"File save success: {video_path}")
+    except Exception as e:
+        logger.error("Failed to save main video file")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-    return session
+    ref_video_path = None
+    if reference_video and reference_video.filename:
+        ref_video_path = await save_upload(reference_video)
+
+    ref_audio_path = None
+    if reference_audio and reference_audio.filename:
+        try:
+            ref_audio_path = await save_upload(reference_audio)
+            logger.info(f"Reference audio save success: {ref_audio_path}")
+        except Exception as e:
+            logger.error("Failed to save reference audio")
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=str(e))
+
+    try:
+        session = Session(
+            title=title,
+            mode=mode,
+            video_path=str(video_path),
+            reference_text=reference_text,
+            reference_video_path=str(ref_video_path) if ref_video_path else None,
+            reference_audio_path=str(ref_audio_path) if ref_audio_path else None,
+            status=AnalysisStatus.processing,
+        )
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+        logger.info(f"Session created with ID {session.id}. Enqueuing background task...")
+
+        background_tasks.add_task(run_analysis_background, session.id)
+
+        return session
+    except Exception as e:
+        logger.error("Database commit or task dispatch failed during session upload")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/", response_model=List[SessionOut])

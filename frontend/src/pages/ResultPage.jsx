@@ -16,20 +16,84 @@ export default function ResultPage() {
   const [showToast, setShowToast] = useState(false)
 
   useEffect(() => {
-    getSession(id).then(r => {
-      setSession(r.data)
-      setLoading(false)
-    })
+    let intervalId = null
+
+    const fetchSession = async () => {
+      try {
+        const r = await getSession(id)
+        setSession(r.data)
+        setLoading(false)
+
+        if (r.data.status === 'processing') {
+          if (!intervalId) {
+            intervalId = setInterval(async () => {
+              try {
+                const pollRes = await getSession(id)
+                setSession(pollRes.data)
+                if (pollRes.data.status !== 'processing') {
+                  clearInterval(intervalId)
+                  intervalId = null
+                }
+              } catch (e) {
+                console.error("Error polling session status", e)
+              }
+            }, 3000)
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching session", err)
+        setLoading(false)
+      }
+    }
+
+    fetchSession()
+
+    return () => {
+      if (intervalId) clearInterval(intervalId)
+    }
   }, [id])
 
   if (loading) return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 16 }}>
       <div style={{ width: 40, height: 40, border: '3px solid var(--surface-muted)', borderTopColor: 'var(--accent-teal)', borderRadius: '50%', animation: 'spinSlow 1s linear infinite' }} />
-      <p className="text-body" style={{ color: 'var(--text-secondary)' }}>Loading analysis...</p>
+      <p className="text-body" style={{ color: 'var(--text-secondary)' }}>Loading session...</p>
     </div>
   )
 
   if (!session) return <p className="text-body" style={{ color: '#EF4444' }}>Session not found</p>
+
+  if (session.status === 'failed') return (
+    <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center', padding: '60px 20px' }}>
+      <div className="glass-panel" style={{ padding: 40, borderLeft: '4px solid #EF4444' }}>
+        <h2 className="text-h2" style={{ color: '#EF4444', marginBottom: 12 }}>Analysis Failed</h2>
+        <p className="text-body" style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
+          {session.error_message || 'An error occurred during AI processing.'}
+        </p>
+        <Link to="/upload" style={{ textDecoration: 'none' }}>
+          <button className="pill-button">Try Another Performance</button>
+        </Link>
+      </div>
+    </div>
+  )
+
+  if (session.status === 'processing') return (
+    <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center', padding: '60px 20px', animation: 'fadeScale 0.5s ease' }}>
+      <div className="glass-panel" style={{ padding: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+        <div style={{ width: 48, height: 48, border: '4px solid var(--surface-muted)', borderTopColor: 'var(--accent-teal)', borderRadius: '50%', animation: 'spinSlow 1s linear infinite' }} />
+        <div>
+          <h2 className="text-h2" style={{ marginBottom: 8 }}>AI Analysis in Progress</h2>
+          <p className="text-body" style={{ color: 'var(--text-secondary)' }}>
+            Your performance is being processed in the background. Results will automatically appear here once complete.
+          </p>
+        </div>
+        <div className="glass-card" style={{ padding: '12px 24px', borderRadius: 100 }}>
+          <span className="text-caption" style={{ color: 'var(--accent-teal)', fontWeight: 600 }}>
+            Status: Processing... (Auto-refreshing every 3s)
+          </span>
+        </div>
+      </div>
+    </div>
+  )
 
   const fr = session.facial_result
   const sr = session.speech_result
