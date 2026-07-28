@@ -109,7 +109,15 @@ async def upload_and_analyze(
         is_audio_file = file_ext in ['.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac']
         
         logger.info(f"Before FFmpeg. is_audio_file: {is_audio_file}")
-        ffmpeg_bin = shutil.which("ffmpeg") or ("/opt/homebrew/bin/ffmpeg" if os.path.exists("/opt/homebrew/bin/ffmpeg") else "ffmpeg")
+        ffmpeg_bin = shutil.which("ffmpeg")
+        if not ffmpeg_bin and os.path.exists("/opt/homebrew/bin/ffmpeg"):
+            ffmpeg_bin = "/opt/homebrew/bin/ffmpeg"
+        if not ffmpeg_bin:
+            try:
+                import imageio_ffmpeg
+                ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+            except ImportError:
+                ffmpeg_bin = "ffmpeg"
 
         audio_path = video_path.with_suffix('').with_name(
             video_path.stem + "_audio.wav"
@@ -155,11 +163,13 @@ async def upload_and_analyze(
                     )
                     # Re-encode to H.264 so browsers can play it
                     h264_path = annotated_path.replace('.mp4', '_h264.mp4')
-                    convert_ret = os.system(
-                        f'ffmpeg -i "{annotated_path}" -c:v libx264 -preset fast '
-                        f'-crf 23 -pix_fmt yuv420p -movflags +faststart '
-                        f'"{h264_path}" -y -loglevel quiet'
+                    convert_res = subprocess.run(
+                        [ffmpeg_bin, "-i", annotated_path, "-c:v", "libx264", "-preset", "fast",
+                         "-crf", "23", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
+                         h264_path, "-y", "-loglevel", "quiet"],
+                        capture_output=True
                     )
+                    convert_ret = convert_res.returncode
                     if convert_ret == 0 and Path(h264_path).exists():
                         os.remove(annotated_path)
                         annotated_path = h264_path

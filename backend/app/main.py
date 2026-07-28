@@ -72,6 +72,14 @@ logger.info("=== STARTUP DIAGNOSTICS ===")
 
 # Check FFmpeg
 ffmpeg_path = shutil.which("ffmpeg")
+if not ffmpeg_path and os.path.exists("/opt/homebrew/bin/ffmpeg"):
+    ffmpeg_path = "/opt/homebrew/bin/ffmpeg"
+if not ffmpeg_path:
+    try:
+        import imageio_ffmpeg
+        ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+    except ImportError:
+        pass
 logger.info(f"FFmpeg path: {ffmpeg_path}")
 if ffmpeg_path:
     try:
