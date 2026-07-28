@@ -12,9 +12,6 @@ from app.db.database import get_db, SessionLocal
 from app.db.models import Session, SpeechResult, FacialResult, PitchResult, AnalysisStatus, PerformanceMode
 from app.api.schemas import SessionOut
 from app.core.config import settings
-from app.modules.speech.analyzer import analyze_speech
-from app.modules.facial.analyzer import analyze_facial
-from app.modules.facial.video_overlay import create_annotated_video
 import traceback
 import logging
 
@@ -104,6 +101,8 @@ def run_analysis_background(session_id: int):
         if not is_audio_file and session.mode in ['acting', 'full'] and not session.facial_result:
             try:
                 logger.info("Starting Facial Analysis...")
+                from app.modules.facial.analyzer import analyze_facial
+                from app.modules.facial.video_overlay import create_annotated_video
                 facial_data = analyze_facial(
                     user_video_path=str(video_path),
                     reference_video_path=str(ref_video_path) if ref_video_path else None,
@@ -152,6 +151,7 @@ def run_analysis_background(session_id: int):
         if session.mode in ['speech', 'full'] and not session.speech_result:
             try:
                 logger.info("Starting Speech Analysis...")
+                from app.modules.speech.analyzer import analyze_speech
                 speech_data = analyze_speech(
                     audio_path=str(audio_path),
                     reference_text=session.reference_text or "",
