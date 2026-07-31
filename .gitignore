@@ -2,10 +2,12 @@ venv/
 __pycache__/
 *.pyc
 .DS_Store
-# ML Models
+# ML Models — large files excluded, but small model weights committed
 *.bin
 *.safetensors
 *.pt
+# *.pth excluded globally but facial model is small (12MB) so it's allowed:
+!backend/app/modules/facial/weights/final_model.pth
 *.pth
 
 backend/app/modules/speech/whisper_hindi/

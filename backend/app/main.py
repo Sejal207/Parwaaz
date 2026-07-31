@@ -129,6 +129,8 @@ app.add_middleware(
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "https://parwaaz-mocha.vercel.app",
+        "https://parwaaz-sm3c.onrender.com",
+        # Add any custom domain here if you have one
     ],
     allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
@@ -137,7 +139,13 @@ app.add_middleware(
 )
 
 # Mount uploads as static so frontend can display videos
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# Ensure directory exists first — Render has an ephemeral filesystem
+upload_static_dir = Path("uploads")
+upload_static_dir.mkdir(exist_ok=True, parents=True)
+try:
+    app.mount("/uploads", StaticFiles(directory=str(upload_static_dir)), name="uploads")
+except Exception as e:
+    logger.warning(f"Could not mount /uploads static dir: {e}")
 
 # Register routes
 app.include_router(sessions.router, prefix="/api")

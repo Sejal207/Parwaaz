@@ -8,7 +8,9 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "uploads"
     REFERENCE_DIR: str = "references"
     MAX_FILE_SIZE_MB: int = 100
-    WHISPER_MODEL: str = "small"
+    # "tiny" is used as default for cloud (Render free = 512MB RAM).
+    # Set WHISPER_MODEL=small in Render env vars if on a paid tier.
+    WHISPER_MODEL: str = "tiny"
 
     class Config:
         env_file = ".env"
