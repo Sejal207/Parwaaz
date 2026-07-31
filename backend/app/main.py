@@ -159,3 +159,43 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/debug")
+def debug():
+    """Deployment diagnostics — check this on Render if analysis isn't working."""
+    import sys
+    import shutil
+    from pathlib import Path
+
+    # Check FFmpeg
+    ffmpeg_path = shutil.which("ffmpeg")
+    if not ffmpeg_path:
+        try:
+            import imageio_ffmpeg
+            ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+        except Exception:
+            ffmpeg_path = None
+
+    # Check facial model
+    facial_model = Path(__file__).parent / "modules/facial/weights/final_model.pth"
+
+    # Check upload dir
+    upload_dir = Path("uploads")
+
+    # Whisper model name from settings
+    from app.core.config import settings
+
+    return {
+        "python": sys.version,
+        "whisper_model_setting": settings.WHISPER_MODEL,
+        "ffmpeg": ffmpeg_path or "NOT FOUND",
+        "facial_model_exists": facial_model.exists(),
+        "facial_model_size_mb": round(facial_model.stat().st_size / 1e6, 1) if facial_model.exists() else 0,
+        "upload_dir_exists": upload_dir.exists(),
+        "upload_dir_abs": str(upload_dir.resolve()),
+        "env_vars": {
+            "DATABASE_URL": "set" if settings.DATABASE_URL != "sqlite:///./app.db" else "NOT SET (using sqlite fallback)",
+            "WHISPER_MODEL": settings.WHISPER_MODEL,
+        },
+    }
