@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session as DBSession
 from typing import Optional, List
 from pathlib import Path
 
-from app.db.database import get_db, SessionLocal
+from app.db.database import get_db, SessionLocal, get_db_session_with_retry
 from app.db.models import Session, SpeechResult, FacialResult, PitchResult, AnalysisStatus, PerformanceMode
 from app.api.schemas import SessionOut
 from app.core.config import settings
@@ -121,7 +121,11 @@ def run_analysis_background(session_id: int):
       3. Attempt real ML analysis for each stage, update results if successful.
     """
     logger.info(f"=== BACKGROUND TASK START: session {session_id} ===")
-    db = SessionLocal()
+    try:
+        db = get_db_session_with_retry()
+    except Exception as db_err:
+        logger.error(f"Background task: Could not connect to DB for session {session_id}: {db_err}")
+        return
     try:
         session = db.query(Session).filter(Session.id == session_id).first()
         if not session:
@@ -316,7 +320,11 @@ def run_analysis_background(session_id: int):
 
 def cleanup_stale_sessions():
     """Reset sessions stuck in 'processing' (from a previous OOM-killed server instance)."""
-    db = SessionLocal()
+    try:
+        db = get_db_session_with_retry()
+    except Exception as e:
+        logger.error(f"cleanup_stale_sessions failed to connect: {e}")
+        return
     try:
         stale = db.query(Session).filter(Session.status == AnalysisStatus.processing).all()
         if stale:
