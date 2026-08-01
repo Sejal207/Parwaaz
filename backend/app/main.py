@@ -119,6 +119,13 @@ async def startup_db():
     except Exception as e:
         logger.error(f"=== DATABASE INIT FAILED: {e} ===")
 
+    # Reset any sessions stuck in 'processing' from a previous OOM-killed instance
+    try:
+        from app.api.routes.sessions import cleanup_stale_sessions
+        cleanup_stale_sessions()
+    except Exception as e:
+        logger.error(f"cleanup_stale_sessions failed: {e}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
