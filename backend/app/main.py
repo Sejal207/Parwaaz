@@ -194,6 +194,7 @@ def debug():
     from app.core.config import settings
 
     return {
+        "version": "v2.1-db-keepalives",
         "python": sys.version,
         "whisper_model_setting": settings.WHISPER_MODEL,
         "ffmpeg": ffmpeg_path or "NOT FOUND",
